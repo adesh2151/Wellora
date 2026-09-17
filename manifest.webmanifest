@@ -2,7 +2,7 @@
   "name": "Wellora By Adesh",
   "short_name": "Wellora",
   "description": "Personal Indian health & nutrition tracker: weight, BMI, calories, macros & micronutrients, goal-based diet & exercise plans, and daily habits.",
-  "id": "/Wellora/",
+  "id": "/",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
