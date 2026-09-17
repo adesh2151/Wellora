@@ -978,7 +978,8 @@ function today(){return dayLog(DB.active,todayKey());}
 
 function bmr(p,wt){const s=p.sex==='male'?5:-161;return 10*wt+6.25*p.height-5*p.age+s;}
 function currentWeight(pid){const L=logsFor(pid);const keys=Object.keys(L).filter(k=>L[k].weight!=null).sort();
- if(keys.length)return L[keys[keys.length-1]].weight;return P().startWeight;}
+ if(keys.length)return L[keys[keys.length-1]].weight;
+ const p=(DB.profiles||[]).find(x=>x.id===pid)||P();return p?p.startWeight:70;}
 function bmiVal(wt,h){return wt/((h/100)**2);}
 function bmiCat(b){ // Asian-Indian cutoffs
  if(b<18.5)return{t:'Underweight',c:'info',p:(b/18.5)*22};
@@ -988,7 +989,8 @@ function bmiCat(b){ // Asian-Indian cutoffs
  return{t:'Obese II',c:'bad',p:clamp(78+((b-30)/5)*22,78,100)};}
 
 function computeTargets(p){
- const wt=currentWeight(p.id);
+ const L=logsFor(p.id);const ks=Object.keys(L).filter(k=>L[k].weight!=null).sort();
+ const wt=ks.length?L[ks[ks.length-1]].weight:(p.startWeight||70);
  const tdee=bmr(p,wt)*p.activity;
  let cal,pf;
  if(p.goal==='lose'){cal=tdee-500;pf=1.9;}
