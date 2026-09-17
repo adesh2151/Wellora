@@ -339,6 +339,63 @@ a.link{color:var(--primary);font-weight:700;text-decoration:none}
 .nbar i{display:block;height:100%;border-radius:5px}
 .nutri-src{font-size:11.5px;font-weight:600}
 
+/* ---- splash / launch screen ---- */
+#splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(158deg,#14957c 0%,#0c5a50 60%,#08423b 100%);color:#fff;
+  padding:env(safe-area-inset-top) 24px calc(24px + env(safe-area-inset-bottom));
+  animation:splashOut .55s ease 1.75s forwards}
+.splash-inner{display:flex;flex-direction:column;align-items:center;text-align:center;transform:translateY(-3%)}
+.splash-logo{width:108px;height:108px;border-radius:30px;background:rgba(255,255,255,.14);
+  display:grid;place-items:center;box-shadow:0 24px 60px -14px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.25);
+  animation:splashPop .75s cubic-bezier(.2,1.25,.3,1) both}
+.splash-logo svg{width:62px;height:62px}
+.splash-name{font-family:var(--display);font-size:44px;font-weight:800;letter-spacing:-.02em;margin:24px 0 0;
+  animation:splashRise .6s ease .18s both}
+.splash-tag{font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.9);
+  margin:12px 0 0;animation:splashRise .6s ease .32s both}
+.splash-sub{font-size:13.5px;font-weight:500;color:rgba(255,255,255,.72);margin:8px 0 0;
+  animation:splashRise .6s ease .44s both}
+.splash-by{position:absolute;bottom:calc(38px + env(safe-area-inset-bottom));font-size:14px;font-weight:600;
+  letter-spacing:.04em;color:rgba(255,255,255,.72);animation:splashRise .6s ease .56s both}
+.splash-by b{color:#fff;font-weight:800}
+@keyframes splashPop{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:none}}
+@keyframes splashRise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes splashOut{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){
+  #splash{animation:splashOut .3s ease 1.1s forwards}
+  .splash-logo,.splash-name,.splash-tag,.splash-sub,.splash-by{animation:none}
+}
+
+/* ---- passcode lock ---- */
+#lockscreen{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(158deg,#14957c,#0b4f47);color:#fff;
+  padding:env(safe-area-inset-top) 24px calc(24px + env(safe-area-inset-bottom))}
+.lock-inner{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;max-width:300px}
+.lock-title{font-family:var(--display);font-size:20px;font-weight:700;margin-top:2px}
+.lock-dots{display:flex;gap:16px}
+.lock-dots i{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.55);transition:.15s}
+.lock-dots i.on{background:#fff;border-color:#fff;transform:scale(1.1)}
+.keypad{display:grid;grid-template-columns:repeat(3,70px);gap:14px;margin-top:4px;justify-content:center}
+.keypad button{height:70px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:25px;font-weight:600;font-family:var(--display);transition:.1s}
+.keypad button:active{background:rgba(255,255,255,.32);transform:scale(.93)}
+.keypad .kp-del{font-size:19px;background:transparent}
+#lockscreen.shake .lock-dots{animation:lshake .4s}
+@keyframes lshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+
+/* ---- onboarding ---- */
+#onboard{position:fixed;inset:0;z-index:9997;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:linear-gradient(160deg,#14957c,#0b4f47);
+  padding:calc(env(safe-area-inset-top) + 32px) 18px calc(env(safe-area-inset-bottom) + 28px)}
+.ob-wrap{max-width:460px;margin:0 auto}
+.ob-head{text-align:center;color:#fff;margin-bottom:18px}
+.ob-logo{width:78px;height:78px;border-radius:22px;background:rgba(255,255,255,.16);display:grid;place-items:center;margin:0 auto 14px;box-shadow:0 18px 44px -14px rgba(0,0,0,.5)}
+.ob-logo svg{width:44px;height:44px}
+.ob-head h1{font-family:var(--display);font-size:29px;letter-spacing:-.02em}
+.ob-head p{font-size:14px;color:rgba(255,255,255,.82);margin-top:5px;font-weight:500;line-height:1.5}
+.ob-card{background:var(--surface);border-radius:20px;padding:18px;box-shadow:0 20px 50px -18px rgba(0,0,0,.5)}
+.ob-card h3{font-size:16px;margin-bottom:14px}
+.ob-note{text-align:center;color:rgba(255,255,255,.7);font-size:11.5px;font-weight:500;margin-top:14px;line-height:1.5}
+
 @media (prefers-reduced-motion:reduce){
   .tab-pane.active .card,.tab-pane.active .rings>*{animation:none}
   .ring-wrap svg circle:last-of-type{transition:none}
@@ -346,6 +403,18 @@ a.link{color:var(--primary);font-weight:700;text-decoration:none}
 </style>
 </head>
 <body>
+
+<div id="splash" aria-hidden="true">
+  <div class="splash-inner">
+    <div class="splash-logo">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.35-9.33-9.02C1.1 8.87 2.7 5.5 6 5.5c2 0 3.2 1.2 4 2.5.8-1.3 2-2.5 4-2.5 3.3 0 4.9 3.37 3.33 6.48C19 16.65 12 21 12 21Z" fill="#ffffff"/><path d="M7 12h2.2l1-2.2L12 14l1.2-3 .9 1h3" stroke="#0f6e63" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h1 class="splash-name">Wellora</h1>
+    <p class="splash-tag">Track · Nourish · Thrive</p>
+    <p class="splash-sub">Your everyday health &amp; nutrition companion</p>
+  </div>
+  <div class="splash-by">by <b>Adesh</b></div>
+</div>
 
 <div class="app">
   <header class="top">
@@ -894,23 +963,10 @@ function makeProfile(o={}){
   autoTargets:true, created:todayKey()
  },o);
 }
-function seedDB(){
- const adesh=makeProfile({
-  id:'adesh',name:'Adesh',sex:'male',age:31,height:173,startWeight:88,goalWeight:78,
-  goal:'lose',activity:1.375,diet:'nonveg',autoTargets:false,
-  targets:{cal:2000,protein:130,carb:235,fat:60,fiber:32,water:2750,steps:9000,sleep:8},created:'2026-09-17'
- });
- const logs={};
- // sample weight trend (clearly flagged) 88.4 -> ~87.4 over 12 days
- const trend=[88.4,88.3,88.1,88.2,87.9,87.9,87.7,87.8,87.6,87.5,87.5,87.4];
- for(let i=0;i<trend.length;i++){
-   const k=fmtKey(addDays(new Date(),-(trend.length-i)));
-   logs[k]={foods:[],water:0,steps:0,exercise:0,weight:trend[i],sleep:0,habits:{},sample:true};
- }
- return {profiles:[adesh],active:'adesh',logs:{adesh:logs},sampleData:true,theme:null,planDay:null};
-}
+/* Fresh install starts with NO profile → user is onboarded, data stays on their device. */
+function freshDB(){return {profiles:[],active:null,logs:{},theme:null,planDay:null};}
 
-let DB=load()||seedDB();
+let DB=load()||freshDB();
 if(!DB.logs)DB.logs={};
 
 /* ---------- profile / log helpers ---------- */
@@ -1642,9 +1698,20 @@ function renderProfile(){
  h+=`<div class="section-title">Data<span class="line"></span></div><div class="card">
    <div class="btn-row">
      <button class="btn ghost sm" onclick="exportData()">⬇ Backup (copy JSON)</button>
-     <button class="btn ghost sm" onclick="importData()">⬆ Restore</button>`;
- if(DB.sampleData)h+=`<button class="btn ghost sm" onclick="clearSample()">Clear sample data</button>`;
- h+=`</div><div class="faint" style="font-size:12px;margin-top:10px">Your data is stored privately in this browser. Use Backup to keep a copy or move devices.</div></div>`;
+     <button class="btn ghost sm" onclick="importData()">⬆ Restore</button>
+     <button class="btn ghost sm" style="color:var(--bad)" onclick="resetApp()">✕ Erase all</button>`;
+ h+=`</div><div class="faint" style="font-size:12px;margin-top:10px">Your data is stored privately in this browser/device only. Use Backup to keep a copy or move to another device.</div></div>`;
+
+ h+=`<div class="section-title">App lock<span class="line"></span></div>
+   <div class="card">
+     <div class="track-row" style="padding-top:0">
+       <div class="track-ic" style="background:var(--primary-soft)">🔒</div>
+       <div><div class="tl">Passcode lock</div><div class="ts">${authEnabled()?'On · asked every time you open the app':'Off'}</div></div>
+       <div class="tv"><button class="btn ${authEnabled()?'ghost':''} sm" onclick="toggleLock()">${authEnabled()?'Turn off':'Set passcode'}</button></div>
+     </div>
+     ${authEnabled()?'<button class="btn ghost sm" style="margin-top:10px" onclick="setPinModal()">Change passcode</button>':''}
+     <div class="faint" style="font-size:11.5px;margin-top:10px">A local passcode keeps casual eyes off your data on this device. It's a privacy lock — not full account security — and applies only to this browser/device.</div>
+   </div>`;
 
  h+=`<div class="disclaimer">Wellora is a personal wellness tracker, not a medical device. Targets use the Mifflin–St&nbsp;Jeor estimate and are starting points — review with a clinician for medical conditions.</div>`;
  $('#pane-profile').innerHTML=h;
@@ -1701,6 +1768,12 @@ function clearSample(){
  const L=logsFor('adesh');Object.keys(L).forEach(k=>{if(L[k].sample)delete L[k];});
  DB.sampleData=false;save();renderAll();toast('Sample data cleared');
 }
+function resetApp(){
+ openModal(`<div class="modal-head"><h3>Erase all data?</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+  <p class="faint" style="font-weight:600;margin-bottom:14px">This permanently deletes all profiles, logs and plans on this device and starts fresh. Consider a Backup first. This can't be undone.</p>
+  <button class="btn block" style="background:var(--bad)" onclick="doResetApp()">Erase everything &amp; start over</button>`);
+}
+function doResetApp(){try{localStorage.removeItem(KEY);}catch(e){}DB=freshDB();closeModal();location.reload();}
 function exportData(){
  const s=JSON.stringify(DB);
  try{navigator.clipboard.writeText(s);toast('Backup copied to clipboard');}catch(e){
@@ -1763,11 +1836,128 @@ $('#themeBtn').onclick=()=>{
 };
 
 /* ---------- chip ---------- */
-function updateChip(){const p=P();$('#chipName').textContent=p.name;$('#chipAvatar').textContent=initials(p.name);
+function updateChip(){const p=P();if(!p){$('#chipName').textContent='Welcome';$('#chipAvatar').textContent='+';$('#brandSub').textContent='By Adesh';return;}
+ $('#chipName').textContent=p.name;$('#chipAvatar').textContent=initials(p.name);
  $('#brandSub').textContent='By Adesh · '+GOALS[p.goal].label;}
 
+/* ---------- passcode lock ---------- */
+function authEnabled(){return !!(DB.auth&&DB.auth.pin);}
+async function hashPin(p){
+ try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('wellora:'+p));
+   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+ catch(e){let h=5381;for(const c of p)h=((h*33)^c.charCodeAt(0))>>>0;return 'f'+h;}
+}
+let lockBuf='';
+function showLock(){
+ if(document.getElementById('lockscreen'))return;
+ lockBuf='';
+ const o=el('div');o.id='lockscreen';
+ o.innerHTML=`<div class="lock-inner">
+   <div class="splash-logo" style="width:74px;height:74px;border-radius:21px;animation:none;box-shadow:none"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.35-9.33-9.02C1.1 8.87 2.7 5.5 6 5.5c2 0 3.2 1.2 4 2.5.8-1.3 2-2.5 4-2.5 3.3 0 4.9 3.37 3.33 6.48C19 16.65 12 21 12 21Z" fill="#fff"/></svg></div>
+   <div class="lock-title">Enter your passcode</div>
+   <div class="lock-dots" id="lockDots"><i></i><i></i><i></i><i></i></div>
+   <div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button onclick="lockKey('${n}')">${n}</button>`).join('')}
+     <span></span><button onclick="lockKey('0')">0</button><button class="kp-del" onclick="lockDel()">⌫</button></div>
+ </div>`;
+ document.body.appendChild(o);
+}
+function updDots(){const d=document.getElementById('lockDots');if(d)[...d.children].forEach((c,i)=>c.classList.toggle('on',i<lockBuf.length));}
+async function lockKey(n){
+ if(lockBuf.length>=4)return;lockBuf+=n;updDots();
+ if(lockBuf.length===4){
+   const h=await hashPin(lockBuf),o=document.getElementById('lockscreen');
+   if(h===DB.auth.pin){o.style.transition='opacity .3s';o.style.opacity='0';setTimeout(()=>o.remove(),300);}
+   else{o.classList.add('shake');lockBuf='';updDots();setTimeout(()=>o.classList.remove('shake'),400);}
+ }
+}
+function lockDel(){lockBuf=lockBuf.slice(0,-1);updDots();}
+function toggleLock(){
+ if(authEnabled()){
+   openModal(`<div class="modal-head"><h3>Turn off passcode?</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+    <p class="faint" style="font-weight:600;margin-bottom:14px">The app will open without asking for a passcode.</p>
+    <button class="btn block" style="background:var(--bad)" onclick="disableLock()">Turn off lock</button>`);
+ } else setPinModal();
+}
+function disableLock(){delete DB.auth;save();closeModal();renderProfile();toast('App lock turned off');}
+function setPinModal(){
+ openModal(`<div class="modal-head"><h3>Set a 4-digit passcode</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+  <div class="field"><label>New passcode</label><input class="input" id="pin1" inputmode="numeric" maxlength="4" placeholder="••••" style="letter-spacing:10px;text-align:center;font-size:22px"></div>
+  <div class="field"><label>Confirm passcode</label><input class="input" id="pin2" inputmode="numeric" maxlength="4" placeholder="••••" style="letter-spacing:10px;text-align:center;font-size:22px"></div>
+  <button class="btn block" onclick="savePin()">Enable lock</button>
+  <p class="faint" style="font-size:11.5px;margin-top:10px">Tip: there's no passcode recovery — if you forget it you'll need to clear the app's data. Keep a backup (Profile → Data).</p>`);
+ setTimeout(()=>{const e=$('#pin1');if(e)e.focus();},250);
+}
+async function savePin(){
+ const a=$('#pin1').value,b=$('#pin2').value;
+ if(!/^\d{4}$/.test(a))return toast('Enter exactly 4 digits');
+ if(a!==b)return toast('Passcodes do not match');
+ DB.auth={pin:await hashPin(a)};save();closeModal();renderProfile();toast('App lock enabled 🔒');
+}
+
+/* ---------- onboarding ---------- */
+function needsOnboarding(){return !DB.profiles||DB.profiles.length===0;}
+function showOnboarding(){
+ if(document.getElementById('onboard'))return;
+ const o=el('div');o.id='onboard';
+ o.innerHTML=`<div class="ob-wrap">
+   <div class="ob-head">
+     <div class="ob-logo"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.35-9.33-9.02C1.1 8.87 2.7 5.5 6 5.5c2 0 3.2 1.2 4 2.5.8-1.3 2-2.5 4-2.5 3.3 0 4.9 3.37 3.33 6.48C19 16.65 12 21 12 21Z" fill="#fff"/></svg></div>
+     <h1>Welcome to Wellora</h1>
+     <p>Let's set up your profile. Everything stays private on this device.</p>
+   </div>
+   <div class="ob-card">
+     <h3>About you</h3>
+     <div class="field"><label>Your name</label><input class="input" id="ob-name" placeholder="e.g. Rahul" autocomplete="name"></div>
+     <div class="field"><label>Your goal</label><div class="seg" id="ob-goal">
+       ${Object.entries(GOALS).map(([k,v],i)=>`<button data-v="${k}" class="${i===0?'on':''}" onclick="segPick(this,'ob-goal')">${v.icon} ${v.label}</button>`).join('')}</div></div>
+     <div class="field"><label>Food preference</label><div class="seg" id="ob-diet">
+       ${Object.entries(DIETS).map(([k,v],i)=>`<button data-v="${k}" class="${i===0?'on':''}" onclick="segPick(this,'ob-diet')">${v.icon} ${v.label}</button>`).join('')}</div></div>
+     <div class="field"><label>Sex</label><div class="seg" id="ob-sex">
+       <button data-v="male" class="on" onclick="segPick(this,'ob-sex')">Male</button>
+       <button data-v="female" onclick="segPick(this,'ob-sex')">Female</button></div></div>
+     <div class="row3">
+       <div class="field"><label>Age</label><input class="input" id="ob-age" type="number" inputmode="numeric" placeholder="30"></div>
+       <div class="field"><label>Height (cm)</label><input class="input" id="ob-height" type="number" inputmode="numeric" placeholder="170"></div>
+       <div class="field"><label>Weight (kg)</label><input class="input" id="ob-sw" type="number" inputmode="decimal" placeholder="70"></div>
+     </div>
+     <div class="row2">
+       <div class="field"><label>Goal weight (kg)</label><input class="input" id="ob-gw" type="number" inputmode="decimal" placeholder="65"></div>
+       <div class="field"><label>Daily activity</label><select class="input" id="ob-act">
+         <option value="1.2">Sedentary</option><option value="1.375" selected>Light (walks)</option>
+         <option value="1.55">Moderate</option><option value="1.725">Active</option></select></div>
+     </div>
+     <button class="btn block accent" style="margin-top:6px" onclick="finishOnboarding()">Create my profile →</button>
+   </div>
+   <div class="ob-note">Wellora is a wellness tracker, not medical advice.<br>You can add more profiles or edit details anytime.</div>
+ </div>`;
+ document.body.appendChild(o);
+ setTimeout(()=>{const e=$('#ob-name');if(e)e.focus();},200);
+}
+function finishOnboarding(){
+ const name=$('#ob-name').value.trim();if(!name)return toast('Please enter your name');
+ const np=makeProfile({name,goal:segVal('ob-goal')||'lose',diet:segVal('ob-diet')||'veg',sex:segVal('ob-sex')||'male',
+   age:+$('#ob-age').value||30,height:+$('#ob-height').value||170,
+   startWeight:+$('#ob-sw').value||70,goalWeight:+$('#ob-gw').value||65,
+   activity:+$('#ob-act').value||1.375,autoTargets:true});
+ np.targets=computeTargets(np);
+ DB.profiles.push(np);DB.active=np.id;logsFor(np.id);save();
+ const o=document.getElementById('onboard');if(o)o.remove();
+ updateChip();renderDash();go('dash');toast('Welcome, '+name+'! 🌱');
+}
+
 /* ---------- boot ---------- */
-updateChip();applyTheme();renderDash();
+applyTheme();updateChip();
+if(!needsOnboarding())renderDash();
+(function(){
+ const s=document.getElementById('splash');
+ const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+ let done=false;
+ const proceed=()=>{if(done)return;done=true;if(s)s.hidden=true;
+   if(needsOnboarding())showOnboarding();
+   else if(authEnabled())showLock();};
+ setTimeout(proceed,reduced?1250:2300);
+ if(s)s.addEventListener('click',proceed);
+})();
 
 /* ---------- PWA install support ---------- */
 let deferredInstall=null;
