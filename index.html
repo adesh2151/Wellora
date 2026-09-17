@@ -482,6 +482,7 @@ const FOODS=[
  {n:'Bombil (Bombay duck) fry',u:'3 pcs',kc:240,p:24,c:8,f:12,cat:'Protein'},
  {n:'Paneer bhurji',u:'1 katori',kc:280,p:16,c:6,f:20,cat:'Protein'},
  {n:'Paneer',u:'100 g',kc:290,p:18,c:4,f:22,cat:'Protein'},
+ {n:'Tofu',u:'100 g',kc:120,p:12,c:2,f:7,cat:'Protein'},
  {n:'Tofu bhurji',u:'1 katori',kc:150,p:14,c:4,f:9,cat:'Protein'},
 
  /* ---- Breakfast & farsan (Breakfast) ---- */
@@ -888,7 +889,7 @@ function makeProfile(o={}){
  return Object.assign({
   id:'p'+Math.random().toString(36).slice(2,8),
   name:'New profile',sex:'male',age:30,height:170,startWeight:75,goalWeight:70,
-  goal:'lose',activity:1.375,
+  goal:'lose',activity:1.375,diet:'veg',
   targets:{cal:2000,protein:130,carb:235,fat:60,fiber:32,water:2750,steps:9000,sleep:8},
   autoTargets:true, created:todayKey()
  },o);
@@ -896,7 +897,7 @@ function makeProfile(o={}){
 function seedDB(){
  const adesh=makeProfile({
   id:'adesh',name:'Adesh',sex:'male',age:31,height:173,startWeight:88,goalWeight:78,
-  goal:'lose',activity:1.375,autoTargets:false,
+  goal:'lose',activity:1.375,diet:'nonveg',autoTargets:false,
   targets:{cal:2000,protein:130,carb:235,fat:60,fiber:32,water:2750,steps:9000,sleep:8},created:'2026-09-17'
  });
  const logs={};
@@ -1376,28 +1377,155 @@ function calChart(p,L){
  return `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`;
 }
 
+/* ---------- PLAN GENERATOR (diet + workout) ---------- */
+const GEN_DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const GEN={
+ split:{b:0.26,s:0.12,l:0.34,d:0.28},
+ breakfast:['Kande pohe','Upma (sanja)','Thalipeeth (bhajni)','Idli','Masala dosa','Uttapam','Moong dal chilla','Oats (cooked)','Dhokla','Sabudana thalipeeth'],
+ bfProtein:['Egg bhurji','Boiled egg','Omelette (2 eggs)'],
+ bfDairy:['Curd (dahi)','Milk (toned)'],
+ fruits:['Guava','Apple','Banana','Papaya','Orange / mosambi','Pomegranate (dalimb)','Dragon fruit','Mango (aamba)','Chikoo (sapota)','Watermelon (kalingad)'],
+ seeds:['Pumpkin seeds','Sunflower seeds','Flax + chia','Walnuts','Almonds','Shengdana (peanuts)'],
+ breads:['Jowar bhakri','Bajra bhakri','Chapati / poli','Nachni (ragi) bhakri'],
+ dals:['Varan / toor dal','Amti (Maharashtrian dal)','Moong sprouts usal','Chana (chickpea) usal','Rajma masala','Matki (moth) usal','Masoor dal','Kulith (horsegram) usal','Chana dal','Sambar'],
+ veg:['Palak bhaji','Methi bhaji','Bhendi (okra) bhaji','Mixed veg sabji','Bhopla (pumpkin) bhaji','Kobi (cabbage) bhaji','Flower (cauliflower) bhaji','Matar (green peas)','Beetroot sabji','Shevga (drumstick) bhaji','Gavar / cluster beans','Farasbi (french beans)'],
+ sides:['Kachumber salad','Curd (dahi)','Koshimbir (cucumber+curd)'],
+ dinnerVeg:['Khichdi (moong dal)','Dal khichdi'],
+ protein:{veg:['Paneer','Tofu','Soya chunks curry','Palak paneer'],
+          egg:['Egg curry (anda rassa)','Paneer','Egg bhurji','Tofu'],
+          nonveg:['Chicken curry (home, lean)','Grilled fish','Fish curry (Malvani)','Mutton curry (lean)','Chicken Kolhapuri (tambda/pandhra)','Prawns (kolambi) masala','Paneer']},
+ rice:'Cooked rice',
+};
+function foodByName(n){return FOODS.find(f=>f.n===n);}
+function mkEntry(name,qty){const f=foodByName(name);if(!f)return null;
+ qty=clamp(Math.round(qty*2)/2,0.5,4);
+ return {n:name,qty,kc:Math.round(f.kc*qty),p:round(f.p*qty,1),c:round(f.c*qty,1),f:round(f.f*qty,1)};}
+function scaleTo(name,budget){const f=foodByName(name);return f?mkEntry(name,budget/f.kc):null;}
+function mealKc(items){return items.reduce((s,x)=>s+(x?x.kc:0),0);}
+function pk(a,i){return a[i%a.length];}
+function reKc(e){const f=foodByName(e.n);e.kc=Math.round(f.kc*e.qty);e.p=round(f.p*e.qty,1);e.c=round(f.c*e.qty,1);e.f=round(f.f*e.qty,1);return e;}
+function nudge(e,dkc){const f=foodByName(e.n);e.qty=clamp(Math.round((e.qty+dkc/f.kc)*2)/2,0.5,4);reKc(e);}
+function generateWeek(p){
+ const t=activeTargets(p),cal=t.cal,diet=p.diet||'veg';
+ const meals={};
+ GEN_DAYS.forEach((day,i)=>{
+   const bB=cal*GEN.split.b,bL=cal*GEN.split.l,bD=cal*GEN.split.d;
+   const bf=[scaleTo(pk(GEN.breakfast,i),bB*0.6)];
+   if(diet!=='veg')bf.push(mkEntry(pk(GEN.bfProtein,i),1));
+   bf.push(mkEntry(pk(GEN.bfDairy,i),diet==='veg'?1:0.75));
+   const sn=[mkEntry(pk(GEN.fruits,i),1),mkEntry(pk(GEN.seeds,i),1.5)];
+   const ln=[scaleTo(pk(GEN.breads,i),bL*0.42),mkEntry(pk(GEN.dals,i),1),mkEntry(pk(GEN.veg,i),1),mkEntry(pk(GEN.sides,i),1)];
+   let dn;
+   if(diet==='veg'){dn=[scaleTo(pk(GEN.dinnerVeg,i),bD*0.5),mkEntry(pk(['Paneer','Tofu','Rajma masala','Chana (chickpea) usal'],i),0.75),mkEntry(pk(GEN.veg,i+3),1)];}
+   else{dn=[mkEntry(pk(GEN.protein[diet],i),1),scaleTo(i%2?GEN.rice:pk(GEN.breads,i+2),bD*0.32),mkEntry(pk(GEN.veg,i+5),1)];}
+   const M={b:bf.filter(Boolean),s:sn.filter(Boolean),l:ln.filter(Boolean),d:dn.filter(Boolean)};
+   // normalize daily total toward calorie target via flex starch/main items
+   let total=['b','s','l','d'].reduce((a,k)=>a+mealKc(M[k]),0),guard=0;
+   const flex=[M.l[0],M.d[0]].filter(Boolean);
+   while(flex.length&&Math.abs(cal-total)>90&&guard++<6){
+     const per=(cal-total)/flex.length;flex.forEach(e=>nudge(e,per));
+     total=['b','s','l','d'].reduce((a,k)=>a+mealKc(M[k]),0);
+   }
+   meals[day]=M;
+ });
+ return {createdAt:todayKey(),diet,goal:p.goal,cal,meals};
+}
+const SESSIONS={
+ strA:{focus:'Full-body strength A',icon:'💪',items:['Goblet / chair squat — 3×12','Push-up (wall → knee → full) — 3×10','Bent-over row (band/backpack) — 3×12','Hip hinge / Romanian deadlift — 3×10','Plank — 3×30 s']},
+ strB:{focus:'Full-body strength B',icon:'🏋️',items:['Split squat / lunges — 3×10 each leg','Incline push-up — 3×12','Single-arm row — 3×12 each','Glute bridge — 3×15','Dead bug — 3×10']},
+ walk:{focus:'Brisk walk & steps',icon:'🚶',items:['30–45 min brisk walk','Reach 8–10k steps','10-min walk after meals']},
+ cardio:{focus:'Cardio intervals',icon:'🔥',items:['5 min warm-up','20 min: 1 min brisk / 2 min easy','5 min cool-down + stretch']},
+ core:{focus:'Core & mobility',icon:'🧘',items:['Plank — 3×30 s','Side plank — 3×20 s each','Bird-dog — 3×10','Hip & spine mobility — 5 min']},
+ rest:{focus:'Active recovery / rest',icon:'😌',items:['Easy 20–30 min walk','Light stretching','Sleep 7.5–8 h']},
+};
+const WEEK_PATTERN={
+ lose:['strA','walk','strB','core','strA','walk','rest'],
+ gain:['strA','rest','strB','walk','strA','strB','rest'],
+ strength:['strA','core','strB','walk','strA','strB','rest'],
+ maintain:['strA','walk','core','walk','strB','walk','rest'],
+};
+const GOAL_NOTE={
+ lose:'Moderate calorie deficit + daily walking + 3 strength days. Judge progress on the 7-day weight trend, not one reading.',
+ gain:'Slight surplus + 4 strength days. Add a rep or a little weight each week (progressive overload).',
+ strength:'Near-maintenance calories, high protein, 4 strength days with steady progression.',
+ maintain:'Balanced calories with steps and 2–3 strength days to hold muscle.',
+};
+
 /* ---------- PLAN ---------- */
+const DIETS={veg:{label:'Veg',icon:'🥬'},egg:{label:'Egg + veg',icon:'🥚'},nonveg:{label:'Non-veg',icon:'🍗'}};
 function renderPlan(){
- const p=P();
+ const p=P(), t=activeTargets(p);
  const dow=DOWFULL[new Date().getDay()];
- if(!DB.planDay)DB.planDay=dow==='Sunday'||PLAN[dow]?dow:'Monday';
- const day=DB.planDay;const pd=PLAN[day];
- let h=`<div class="section-title" style="margin-top:14px">Weekly meal plan<span class="line"></span><span class="pill pri">Maharashtrian</span></div>`;
- h+=`<div class="day-tabs">`+Object.keys(PLAN).map(dn=>`<button class="day-tab ${dn===day?'on':''}" onclick="setPlanDay('${dn}')">${dn.slice(0,3)}</button>`).join('')+`</div>`;
+ if(!DB.planDay||!PLAN[DB.planDay])DB.planDay=PLAN[dow]?dow:'Monday';
+ const day=DB.planDay, gp=p.genPlan;
+ let h='';
+
+ if(gp){
+   h+=`<div class="card hero" style="margin-top:14px">
+     <div class="hero-top"><div>
+       <div class="sub" style="font-size:11px;font-weight:800;color:#b9e2da;text-transform:uppercase;letter-spacing:.05em">Your personalized plan</div>
+       <h2 style="font-size:21px">${GOALS[p.goal].label} · ${DIETS[gp.diet].label}</h2></div>
+       <span class="goaltag">${gp.cal} kcal/day</span></div>
+     <div style="font-size:12.5px;color:#cdeee6;font-weight:600">${GOAL_NOTE[p.goal]}</div>
+     <div class="btn-row" style="margin-top:12px">
+       <button class="btn accent sm" onclick="openGenerator()">↻ Regenerate</button>
+       <button class="btn sm" style="background:rgba(255,255,255,.16);color:#fff" onclick="clearGenPlan()">Use default plan</button></div></div>`;
+ } else {
+   h+=`<div class="card hero" style="margin-top:14px">
+     <div class="hero-top"><div><h2 style="font-size:22px">Build your plan</h2>
+       <div class="sub" style="font-size:13px;color:#cdeee6;font-weight:600;margin-top:4px">Auto-create a 7-day Maharashtrian meal plan + weekly workout, tuned to your goal, food preference and calorie target.</div></div>
+       <span style="font-size:30px">🍽️</span></div>
+     <button class="btn accent block" style="margin-top:14px" onclick="openGenerator()">✨ Generate my plan</button></div>`;
+ }
+
+ h+=`<div class="section-title">${gp?'Meal plan':'Weekly meal plan'}<span class="line"></span><span class="pill pri">${gp?DIETS[gp.diet].label:'Maharashtrian'}</span></div>`;
+ h+=`<div class="day-tabs">`+GEN_DAYS.map(dn=>`<button class="day-tab ${dn===day?'on':''}" onclick="setPlanDay('${dn}')">${dn.slice(0,3)}</button>`).join('')+`</div>`;
  h+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
    <h3 style="font-size:18px">${day}</h3>${day===dow?'<span class="pill good">Today</span>':''}</div>`;
  MEALMETA.forEach(([slot,label,emoji,bg])=>{
-   const key={b:'b',s:'s',l:'l',d:'d'}[slot];
-   h+=`<div class="plan-meal"><span class="pm-ic" style="background:${bg}">${emoji}</span>
-     <div style="flex:1"><div class="pm-t">${label}</div><div class="pm-d">${esc(pd[key])}</div></div>
-     <button class="btn ghost sm" onclick="logPlanMeal('${slot}','${day}')" title="Log to today">＋</button></div>`;
+   if(gp){
+     const items=gp.meals[day][slot]||[];
+     h+=`<div class="plan-meal"><span class="pm-ic" style="background:${bg}">${emoji}</span>
+       <div style="flex:1"><div class="pm-t">${label} · <span class="tnum">${mealKc(items)} kcal</span></div>
+       <div class="pm-d">${items.map(x=>`${x.qty!==1?x.qty+'× ':''}${esc(x.n)}`).join(' + ')}</div></div>
+       <button class="btn ghost sm" onclick="logGenMeal('${day}','${slot}')" title="Log to today">＋</button></div>`;
+   } else {
+     const pd=PLAN[day];
+     h+=`<div class="plan-meal"><span class="pm-ic" style="background:${bg}">${emoji}</span>
+       <div style="flex:1"><div class="pm-t">${label}</div><div class="pm-d">${esc(pd[slot])}</div></div>
+       <button class="btn ghost sm" onclick="logPlanMeal('${slot}','${day}')" title="Log to today">＋</button></div>`;
+   }
  });
+ if(gp){
+   const dt=['b','s','l','d'].reduce((s,k)=>s+mealKc(gp.meals[day][k]||[]),0);
+   h+=`<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);margin-top:6px;padding-top:12px">
+     <b class="tnum">Day total ≈ ${dt} kcal</b>
+     <button class="btn sm" onclick="logGenDay('${day}')">Log whole day</button></div>`;
+ }
  h+=`</div>`;
- h+=`<div class="card" style="margin-top:14px"><div class="seed-note"><span class="s-ic">🌰</span>
-   <div><b>Seed rotation:</b> ${esc(pd.seed)}<div class="faint" style="font-weight:600;font-size:12px;margin-top:2px">Weigh seeds — nutrient-dense but calorie-dense.</div></div></div></div>`;
 
- // targets reference
- const t=activeTargets(p);
+ if(!gp){const pd=PLAN[day];
+   h+=`<div class="card" style="margin-top:14px"><div class="seed-note"><span class="s-ic">🌰</span>
+     <div><b>Seed rotation:</b> ${esc(pd.seed)}<div class="faint" style="font-weight:600;font-size:12px;margin-top:2px">Weigh seeds — nutrient-dense but calorie-dense.</div></div></div></div>`;
+ }
+
+ // workout
+ const gk=WEEK_PATTERN[p.goal]||WEEK_PATTERN.lose;
+ const sess=SESSIONS[gk[GEN_DAYS.indexOf(day)]];
+ h+=`<div class="section-title">Workout — ${day}<span class="line"></span><span class="pill pri">${GOALS[p.goal].label}</span></div>
+   <div class="card"><div class="plan-meal" style="border:none;padding:0 0 6px">
+     <span class="pm-ic" style="background:var(--primary-soft);font-size:18px">${sess.icon}</span>
+     <div style="flex:1"><div class="pm-t">Focus</div><div class="pm-d">${sess.focus}</div></div></div>`;
+ sess.items.forEach(it=>{h+=`<div class="check" style="cursor:default"><span class="box" style="border-radius:6px;border-color:var(--primary)"></span><span class="ctxt" style="font-weight:600">${esc(it)}</span></div>`;});
+ h+=`</div>`;
+ h+=`<div class="card" style="margin-top:14px"><div class="pm-t" style="margin-bottom:6px">This week's split</div>`;
+ GEN_DAYS.forEach((dn,i)=>{const s=SESSIONS[gk[i]];
+   h+=`<div class="track-row" style="padding:9px 0;cursor:pointer" onclick="setPlanDay('${dn}')">
+     <span class="track-ic" style="background:var(--surface-2);font-size:16px">${s.icon}</span>
+     <div><div class="tl" style="font-size:13.5px">${dn}</div><div class="ts">${s.focus}</div></div>
+     ${dn===dow?'<span class="pill good" style="margin-left:auto">today</span>':''}</div>`;});
+ h+=`</div>`;
+
  h+=`<div class="section-title">Your daily targets<span class="line"></span></div>
    <div class="card"><div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
     <div class="stat"><div class="k">Calories</div><div class="v tnum">${t.cal}</div></div>
@@ -1408,10 +1536,41 @@ function renderPlan(){
     <div class="stat"><div class="k">Water</div><div class="v tnum">${round(t.water/1000,1)}<small>L</small></div></div>
    </div></div>`;
 
- h+=`<div class="disclaimer">🩺 This plan and its numbers are practical planning estimates for general wellness, not medical advice. Calorie and nutrient values vary by recipe and portion. For any diagnosed condition or deficiency (e.g. vitamin&nbsp;D / B12), follow your clinician's guidance.</div>`;
+ h+=`<div class="disclaimer">🩺 Generated meal & workout plans are practical starting points for general wellness — not medical or personal-training advice. Scale portions to real hunger, stop any exercise that causes pain, and get individual guidance. For a diagnosed condition or deficiency, follow your clinician.</div>`;
  $('#pane-plan').innerHTML=h;
 }
 function setPlanDay(d){DB.planDay=d;save();renderPlan();}
+function openGenerator(){
+ const p=P();
+ let h=`<div class="modal-head"><h3>Generate your plan</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
+ h+=`<p class="faint" style="font-weight:600;margin-bottom:14px">Builds a 7-day meal plan from the food library plus a weekly workout, matched to your ${activeTargets(p).cal} kcal/day target.</p>`;
+ h+=`<div class="field"><label>Goal</label><div class="seg" id="gen-goal">
+    ${Object.entries(GOALS).map(([k,v])=>`<button data-v="${k}" class="${p.goal===k?'on':''}" onclick="segPick(this,'gen-goal')">${v.icon} ${v.label}</button>`).join('')}</div></div>`;
+ h+=`<div class="field"><label>Food preference</label><div class="seg" id="gen-diet">
+    ${Object.entries(DIETS).map(([k,v])=>`<button data-v="${k}" class="${(p.diet||'veg')===k?'on':''}" onclick="segPick(this,'gen-diet')">${v.icon} ${v.label}</button>`).join('')}</div></div>`;
+ h+=`<button class="btn block accent" style="margin-top:6px" onclick="doGenerate()">✨ Generate 7-day plan</button>`;
+ openModal(h);
+}
+function doGenerate(){
+ const p=P();
+ p.goal=segVal('gen-goal')||p.goal;
+ p.diet=segVal('gen-diet')||p.diet||'veg';
+ if(p.autoTargets)p.targets=computeTargets(p);
+ p.genPlan=generateWeek(p);
+ save();updateChip();closeModal();renderPlan();toast('Your plan is ready ✨');
+}
+function clearGenPlan(){const p=P();delete p.genPlan;save();renderPlan();toast('Switched to default plan');}
+function logGenMeal(day,slot){
+ const p=P();const items=(p.genPlan&&p.genPlan.meals[day]&&p.genPlan.meals[day][slot])||[];
+ if(!items.length)return;logDate=todayKey();const d=dayLog(p.id,logDate);
+ items.forEach(x=>d.foods.push(Object.assign({id:'f'+Math.random().toString(36).slice(2,9),slot},x)));
+ delete d.sample;save();toast('Logged '+MEALMETA.find(m=>m[0]===slot)[1]);go('log');
+}
+function logGenDay(day){
+ const p=P(),gp=p.genPlan;if(!gp)return;logDate=todayKey();const d=dayLog(p.id,logDate);
+ ['b','s','l','d'].forEach(slot=>(gp.meals[day][slot]||[]).forEach(x=>d.foods.push(Object.assign({id:'f'+Math.random().toString(36).slice(2,9),slot},x))));
+ delete d.sample;save();toast('Logged whole day');go('log');
+}
 function logPlanMeal(slot,day){
  // add plan text as a quick note entry (0 est if unknown) — user can edit; we estimate via rough defaults
  addSlot=slot;const pd=PLAN[day];const txt=pd[{b:'b',s:'s',l:'l',d:'d'}[slot]];
