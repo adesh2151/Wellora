@@ -472,7 +472,7 @@ const DOWFULL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Satu
 /* ---------- storage ---------- */
 const KEY='swasthtrack.v1';
 function load(){try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}return null;}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}if(typeof scheduleFsWrite==='function')scheduleFsWrite();}
 
 /* ---------- Maharashtrian & Indian food database (per typical serving) ---------- */
 /* kcal, p(rotein), c(arb), f(at) grams — practical planning estimates.
@@ -1041,6 +1041,7 @@ function freshDB(){return {profiles:[],active:null,logs:{},theme:null,planDay:nu
 
 let DB=load()||freshDB();
 if(!DB.logs)DB.logs={};
+let fsHandle=null;
 
 /* ---------- profile / log helpers ---------- */
 function P(){return DB.profiles.find(p=>p.id===DB.active)||DB.profiles[0];}
@@ -1873,12 +1874,27 @@ function renderProfile(){
   </div></div>`;
 
  // data management
- h+=`<div class="section-title">Data<span class="line"></span></div><div class="card">
-   <div class="btn-row">
-     <button class="btn ghost sm" onclick="exportData()">⬇ Backup (copy JSON)</button>
-     <button class="btn ghost sm" onclick="importData()">⬆ Restore</button>
-     <button class="btn ghost sm" style="color:var(--bad)" onclick="resetApp()">✕ Erase all</button>`;
- h+=`</div><div class="faint" style="font-size:12px;margin-top:10px">Your data is stored privately in this browser/device only. Use Backup to keep a copy or move to another device.</div></div>`;
+ h+=`<div class="section-title">Backup & data safety<span class="line"></span></div><div class="card">`;
+ if(fsaSupported()){
+   if(DB.autoBackup){
+     h+=`<div class="track-row" style="padding-top:0"><div class="track-ic" style="background:var(--good-soft)">🔒</div>
+       <div><div class="tl">Auto-backup is on</div><div class="ts">Your data saves to your chosen file automatically</div></div>
+       <div class="tv"><button class="btn ghost sm" onclick="disableAutoBackup()">Turn off</button></div></div>`;
+   } else {
+     h+=`<div class="track-row" style="padding-top:0"><div class="track-ic" style="background:var(--surface-2)">💾</div>
+       <div><div class="tl">Auto-backup to a file</div><div class="ts">Pick a file once — Wellora keeps it updated</div></div>
+       <div class="tv"><button class="btn sm" onclick="enableAutoBackup()">Set up</button></div></div>`;
+   }
+ } else {
+   h+=`<div class="faint" style="font-size:12px;margin-bottom:6px">💡 Auto-save to a file works on Chrome & Android. On iPhone, use “Save backup file” below and keep it in your Files/iCloud.</div>`;
+ }
+ h+=`<div class="btn-row" style="margin-top:10px">
+     <button class="btn sm" onclick="downloadBackup()">📄 Save backup file</button>
+     <button class="btn ghost sm" onclick="restoreFromFile()">↩ Restore from file</button>
+     ${fsaSupported()?'<button class="btn ghost sm" onclick="fsRestore()">Load auto file</button>':''}
+     <button class="btn ghost sm" style="color:var(--bad)" onclick="resetApp()">✕ Erase all</button></div>
+   <div class="faint" style="font-size:12px;margin-top:10px">Your data lives only on this device. Keep a backup file so you never lose it — and to move to a new phone or laptop.</div></div>`;
+ h+=`<div class="card" style="margin-top:14px"><button class="btn ghost block" onclick="showPolicy()">🛡️ Privacy & Security policy</button></div>`;
 
  h+=`<div class="section-title">App lock<span class="line"></span></div>
    <div class="card">
@@ -1952,19 +1968,60 @@ function resetApp(){
   <button class="btn block" style="background:var(--bad)" onclick="doResetApp()">Erase everything &amp; start over</button>`);
 }
 function doResetApp(){try{localStorage.removeItem(KEY);}catch(e){}DB=freshDB();closeModal();location.reload();}
-function exportData(){
- const s=JSON.stringify(DB);
- try{navigator.clipboard.writeText(s);toast('Backup copied to clipboard');}catch(e){
-  openModal(`<div class="modal-head"><h3>Backup</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
-   <p class="faint" style="font-size:13px">Copy and save this text:</p><textarea class="input" style="height:180px" readonly>${esc(s)}</textarea>`);}
+/* ---------- backup & data safety (no server) ---------- */
+function backupJSON(){return JSON.stringify(DB);}
+function downloadBackup(){
+ try{
+   const url=URL.createObjectURL(new Blob([backupJSON()],{type:'application/json'}));
+   const a=document.createElement('a');a.href=url;a.download='wellora-backup-'+todayKey()+'.json';
+   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+   toast('Backup file saved 📄');
+ }catch(e){toast('Could not save file');}
 }
-function importData(){
- openModal(`<div class="modal-head"><h3>Restore backup</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
-  <p class="faint" style="font-size:13px;margin-bottom:8px">Paste your backup JSON:</p>
-  <textarea class="input" id="impArea" style="height:180px"></textarea>
-  <button class="btn block" style="margin-top:12px" onclick="doImport()">Restore</button>`);
+function restoreFromFile(){
+ const inp=document.createElement('input');inp.type='file';inp.accept='application/json,.json';
+ inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();
+   r.onload=()=>{try{const o=JSON.parse(r.result);if(!o||!o.profiles)throw 0;DB=o;save();updateChip();renderAll();toast('Data restored ✅');}catch(e){toast('Invalid backup file');}};
+   r.readAsText(f);};
+ inp.click();
 }
-function doImport(){try{const o=JSON.parse($('#impArea').value);if(!o.profiles)throw 0;DB=o;save();updateChip();renderAll();closeModal();toast('Data restored');}catch(e){toast('Invalid backup');}}
+/* File System Access auto-backup (Chrome desktop / Android only) */
+function fsaSupported(){return typeof window!=='undefined' && 'showSaveFilePicker' in window;}
+function idbOpen(){return new Promise(res=>{try{const o=indexedDB.open('wellora-kv',1);o.onupgradeneeded=()=>o.result.createObjectStore('kv');o.onsuccess=()=>res(o.result);o.onerror=()=>res(null);}catch(e){res(null);}});}
+async function idbSet(k,v){const db=await idbOpen();if(!db)return;return new Promise(res=>{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>res();});}
+async function idbGet(k){const db=await idbOpen();if(!db)return null;return new Promise(res=>{const tx=db.transaction('kv','readonly');const rq=tx.objectStore('kv').get(k);rq.onsuccess=()=>res(rq.result);rq.onerror=()=>res(null);});}
+async function enableAutoBackup(){
+ if(!fsaSupported())return toast('Auto-save needs Chrome or an Android phone');
+ try{
+   const h=await window.showSaveFilePicker({suggestedName:'wellora-backup.json',types:[{description:'Wellora backup',accept:{'application/json':['.json']}}]});
+   fsHandle=h;await idbSet('fsHandle',h);DB.autoBackup=true;save();await fsWrite();toast('Auto-backup on 🔒');renderProfile();
+ }catch(e){/* user cancelled */}
+}
+function disableAutoBackup(){fsHandle=null;idbSet('fsHandle',null);DB.autoBackup=false;save();renderProfile();toast('Auto-backup off');}
+async function fsWrite(){if(!fsHandle)return;try{const w=await fsHandle.createWritable();await w.write(backupJSON());await w.close();}catch(e){}}
+async function fsRestore(){
+ if(!fsaSupported())return toast('Use Restore from file instead');
+ try{if(!fsHandle){const [h]=await window.showOpenFilePicker({types:[{description:'Wellora backup',accept:{'application/json':['.json']}}]});fsHandle=h;await idbSet('fsHandle',h);}
+   if(fsHandle.requestPermission){const perm=await fsHandle.requestPermission({mode:'readwrite'});if(perm!=='granted')return toast('Permission needed');}
+   const f=await fsHandle.getFile();const o=JSON.parse(await f.text());if(!o||!o.profiles)throw 0;DB=o;DB.autoBackup=true;save();updateChip();renderAll();toast('Loaded from backup file ✅');
+ }catch(e){toast('Could not read the file');}
+}
+let fsTimer=null;
+function scheduleFsWrite(){if(!fsHandle||!DB.autoBackup)return;clearTimeout(fsTimer);fsTimer=setTimeout(fsWrite,3000);}
+async function loadFsHandle(){try{const h=await idbGet('fsHandle');if(h)fsHandle=h;}catch(e){}}
+async function requestPersist(){try{if(navigator.storage&&navigator.storage.persist){const p=await navigator.storage.persisted();if(!p)await navigator.storage.persist();}}catch(e){}}
+function showPolicy(){
+ openModal(`<div class="modal-head"><h3>Privacy &amp; Security</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+  <div style="font-size:13.5px;line-height:1.65;color:var(--ink-soft)">
+   <p style="margin:0 0 10px"><b style="color:var(--ink)">Your data stays on your device.</b> Wellora saves your profiles, food logs, weight and plans locally in your browser. It is <b>not sent to any server</b> — no one, including the developer, can see it.</p>
+   <p style="margin:0 0 10px"><b style="color:var(--ink)">No account, no tracking.</b> No sign-up, no ads, and no analytics that identify you.</p>
+   <p style="margin:0 0 10px"><b style="color:var(--ink)">Backups are yours.</b> Save a backup file yourself, or on Chrome/Android turn on auto-backup to a file you choose. Those files stay wherever you keep them.</p>
+   <p style="margin:0 0 10px"><b style="color:var(--ink)">App lock.</b> Set a passcode so only you can open the app on this device.</p>
+   <p style="margin:0 0 10px"><b style="color:var(--ink)">Storage protection.</b> Wellora asks your browser to keep your data safe from automatic clearing.</p>
+   <p style="margin:0 0 10px"><b style="color:var(--ink)">Health note.</b> Wellora is a wellness tracker, not medical advice or a medical device. For any condition or medication, follow your doctor.</p>
+   <p class="faint" style="font-size:12px;margin:12px 0 0">If you clear your browser data or uninstall without a backup, local data is lost — keep a backup file.</p>
+  </div>`);
+}
 
 /* ---------- profile switcher (chip) ---------- */
 $('#profileChip').onclick=()=>{
@@ -2125,6 +2182,7 @@ function finishOnboarding(){
 
 /* ---------- boot ---------- */
 applyTheme();updateChip();
+requestPersist();loadFsHandle();
 if(!needsOnboarding())renderDash();
 (function(){
  const s=document.getElementById('splash');
