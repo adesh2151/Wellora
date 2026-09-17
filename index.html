@@ -1320,8 +1320,10 @@ function renderLog(){
    <div class="progress-line" style="background:var(--ring-track);margin-top:6px"><i style="width:${clamp(net/t.cal*100,0,100)}%;background:${rem<0?'var(--bad)':'var(--accent)'}"></i></div>
  </div>`;
 
- // scan food
- h+=`<button class="btn accent block" style="margin-top:14px" onclick="openScan()"><svg viewBox="0 0 24 24" fill="none" style="width:18px;height:18px"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/></svg> Scan food with camera</button>`;
+ // scan + quick add
+ h+=`<div class="btn-row" style="margin-top:14px">
+     <button class="btn accent" style="flex:1;min-width:140px" onclick="openScan()"><svg viewBox="0 0 24 24" fill="none" style="width:17px;height:17px"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/></svg> Scan food</button>
+     <button class="btn" style="flex:1;min-width:140px" onclick="openQuickAdd()">⚡ Quick add (type/speak)</button></div>`;
  // meals
  h+=`<div style="margin-top:16px">`;
  MEALMETA.forEach(([slot,label,emoji,bg])=>{
@@ -1980,6 +1982,87 @@ function confirmPlanMeal(){
 }
 
 /* ---------- PROFILE ---------- */
+/* ---------- quick add (natural language: type or speak) ---------- */
+const NUMWORDS={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,half:0.5};
+function wordNum(w){if(w==null)return null;w=(''+w).toLowerCase();if(NUMWORDS[w]!=null)return NUMWORDS[w];const n=parseFloat(w);return isNaN(n)?null:n;}
+function rxEsc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+const FOOD_KEYWORDS=[
+ ['jowar bhakri','Jowar bhakri'],['bajra bhakri','Bajra bhakri'],['bhakri','Jowar bhakri'],
+ ['chapati','Chapati / poli'],['roti','Chapati / poli'],['poli','Chapati / poli'],['rice','Cooked rice'],
+ ['moong khichdi','Khichdi (moong dal)'],['khichdi','Khichdi (moong dal)'],['poha','Kande pohe'],['upma','Upma (sanja)'],
+ ['toor dal','Varan / toor dal'],['dal','Varan / toor dal'],['varan','Varan / toor dal'],['rajma','Rajma masala'],
+ ['chana usal','Chana (chickpea) usal'],['chana','Chana (chickpea) usal'],['sprouts','Moong sprouts usal'],['usal','Moong sprouts usal'],
+ ['paneer','Paneer'],['tofu','Tofu'],['curd','Curd (dahi)'],['dahi','Curd (dahi)'],['buttermilk','Taak (buttermilk)'],
+ ['milk','Milk (toned)'],['omelette','Omelette (2 eggs)'],['egg','Boiled egg'],
+ ['chicken','Chicken curry (home, lean)'],['mutton','Mutton curry (lean)'],['fish','Grilled fish'],['prawn','Prawns (kolambi) masala'],
+ ['palak','Palak bhaji'],['methi','Methi bhaji'],['bhendi','Bhendi (okra) bhaji'],['okra','Bhendi (okra) bhaji'],
+ ['salad','Kachumber salad'],['apple','Apple'],['banana','Banana'],['guava','Guava'],['papaya','Papaya'],
+ ['orange','Orange / mosambi'],['mosambi','Orange / mosambi'],['mango','Mango (aamba)'],['pomegranate','Pomegranate (dalimb)'],['grapes','Grapes'],
+ ['almond','Almonds'],['walnut','Walnuts'],['peanut','Shengdana (peanuts)'],['cashew','Cashew (kaju)'],
+ ['whey','Whey protein (1 scoop)'],['protein shake','Whey shake (in milk)'],['protein bar','Protein bar'],['multivitamin','Multivitamin tablet'],
+ ['idli','Idli'],['dosa','Masala dosa'],['vada pav','Vada pav'],['misal','Misal pav'],['samosa','Samosa'],
+ ['tea','Tea/coffee (little milk)'],['coffee','Tea/coffee (little milk)'],['biryani','Chicken biryani'],
+ ['pav bhaji','Pav bhaji'],['thalipeeth','Thalipeeth (bhajni)'],['sabudana','Sabudana khichdi'],['sheera','Sheera (rava)'],
+];
+const EX_ALIAS={ran:'Running / jogging',run:'Running / jogging',jog:'Running / jogging',jogging:'Running / jogging',
+ walk:'Walking (brisk)',walked:'Walking (brisk)',walking:'Walking (brisk)',cycle:'Cycling',cycling:'Cycling',cycled:'Cycling',
+ swim:'Swimming',swimming:'Swimming',yoga:'Yoga',skipping:'Skipping rope',gym:'Strength training',workout:'Bodyweight workout',cardio:'Gym cardio',dance:'Dancing / Zumba',zumba:'Dancing / Zumba'};
+function parseFoods(t){
+ let s=' '+t+' ',res=[];
+ const kws=[...FOOD_KEYWORDS].sort((a,b)=>b[0].length-a[0].length);
+ for(const [kw,name] of kws){
+   const re=new RegExp("(?:(\\d+(?:\\.\\d)?|half|a|an|one|two|three|four|five|six|seven|eight|nine|ten)\\s+)?\\b"+rxEsc(kw)+"s?\\b","i");
+   const m=s.match(re);
+   if(m){const idx=FOODS.findIndex(f=>f.n===name);if(idx>=0){res.push({idx,qty:m[1]?(wordNum(m[1])||1):1});s=s.replace(m[0]," ");}}
+ }
+ return res;
+}
+function applyQuickAdd(text){
+ const p=P(),d=dayLog(p.id,todayKey()),done=[];
+ let t=" "+text.toLowerCase()+" ";
+ let m=t.match(/(\d{2,6})\s*steps?\b/);
+ if(m){d.steps=parseInt(m[1]);done.push("👟 "+fmtK(d.steps)+" steps");t=t.replace(m[0]," ");}
+ m=t.match(/(\d+|one|two|three|four|five|six|seven|eight)\s*(?:glass|glasses|cup|cups)\s*(?:of\s*)?water/);
+ if(m){const n=wordNum(m[1])||1;d.water=(d.water||0)+n*250;done.push("💧 "+n+" glass"+(n>1?"es":"")+" water");t=t.replace(m[0]," ");}
+ else if(/\bwater\b/.test(t)&&/\b(drank|drink|had)\b/.test(t)){d.water=(d.water||0)+250;done.push("💧 1 glass water");}
+ m=t.match(/weight\s*(?:is|=|:)?\s*(\d{2,3}(?:\.\d)?)/)||t.match(/(\d{2,3}(?:\.\d)?)\s*(?:kgs?|kilos?)\b/);
+ if(m){const w=parseFloat(m[1]);if(w>=20&&w<=300){d.weight=w;done.push("⚖️ "+w+" kg");}}
+ const mm=t.match(/(\d+)\s*(?:min|mins|minute|minutes)/);
+ if(mm){for(const k in EX_ALIAS){if(new RegExp("\\b"+k+"\\b").test(t)){const ex=EXERCISES.find(e=>e.n===EX_ALIAS[k]);if(ex){const min=parseInt(mm[1]),wt=currentWeight(p.id),kc=Math.round(ex.met*wt*(min/60));d.exercises=d.exercises||[];d.exercises.push({id:"x"+Math.random().toString(36).slice(2,9),n:ex.n,met:ex.met,min,kc});d.exercise=d.exercises.reduce((a,x)=>a+x.kc,0);done.push("🔥 "+ex.n+" "+min+" min ("+kc+" kcal)");}break;}}}
+ const slot=new Date().getHours()<11?"b":new Date().getHours()<16?"l":new Date().getHours()<19?"s":"d";
+ parseFoods(t).forEach(ff=>{const f=FOODS[ff.idx],kc=Math.round(f.kc*ff.qty);d.foods.push({id:"f"+Math.random().toString(36).slice(2,9),slot,n:f.n,qty:ff.qty,kc,p:round(f.p*ff.qty,1),c:round(f.c*ff.qty,1),f:round(f.f*ff.qty,1)});done.push("🍽️ "+(ff.qty!==1?ff.qty+"× ":"")+f.n+" ("+kc+" kcal)");});
+ delete d.sample;save();
+ return done;
+}
+function speechSupported(){return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;}
+function openQuickAdd(){
+ let h=`<div class="modal-head"><h3>⚡ Quick add</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
+ h+=`<p class="faint" style="font-size:12.5px;margin-bottom:10px">Type it (or tap 🎙️ to speak) in plain words — I'll log foods, steps, water, exercise & weight.</p>`;
+ h+=`<div style="display:flex;gap:8px"><input class="input" id="qaIn" placeholder="e.g. 2 bhakri, an apple, 4100 steps" onkeydown="if(event.key==='Enter')doQuickAdd()">${speechSupported()?`<button class="btn ghost sm" id="qaMic" onclick="qaVoice()" style="flex:none;font-size:18px">🎙️</button>`:''}</div>`;
+ h+=`<div class="faint" style="font-size:11.5px;margin-top:8px">Try: “I ate 2 bhakri and dal, drank 3 glasses water, walked 30 minutes”${speechSupported()?'':'<br>(Voice input is not supported on this browser — typing works everywhere.)'}</div>`;
+ h+=`<button class="btn block accent" style="margin-top:12px" onclick="doQuickAdd()">Add to today</button>`;
+ openModal(h);
+ setTimeout(()=>{const e=document.getElementById('qaIn');if(e)e.focus();},250);
+}
+function doQuickAdd(){
+ const el=document.getElementById('qaIn');const txt=el?el.value.trim():'';if(!txt)return;
+ const done=applyQuickAdd(txt);
+ closeModal();
+ if(cur==='log')renderLog();else if(cur==='dash')renderDash();
+ if(done.length)toast("Logged: "+done.map(x=>x.replace(/^\S+\s/,'')).join(", "));
+ else toast("Couldn't catch that — try naming foods, steps or water");
+}
+function qaVoice(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR)return toast("Voice not supported on this browser");
+ const r=new SR();r.lang='en-IN';r.interimResults=false;r.maxAlternatives=1;
+ const mic=document.getElementById('qaMic');if(mic)mic.textContent='🔴';
+ r.onresult=e=>{const txt=e.results[0][0].transcript;const el=document.getElementById('qaIn');if(el)el.value=(el.value?el.value+", ":"")+txt;};
+ r.onerror=()=>{if(mic)mic.textContent='🎙️';toast("Didn't catch that — try again or type");};
+ r.onend=()=>{if(mic)mic.textContent='🎙️';};
+ try{r.start();}catch(e){}
+}
+
 /* ---------- coach (data-driven, on-device) ---------- */
 const COACH_BASE=['What should I eat now?','Am I on track today?','What am I missing?','Give me a tip'];
 function coachChips(){const p=P();const c=[...COACH_BASE];if(p.goal==='lose')c.splice(2,0,'Why am I not losing weight?');else if(p.goal==='gain')c.splice(2,0,'How do I gain healthily?');return c;}
@@ -2527,8 +2610,9 @@ function finishOnboarding(){
 }
 
 /* ---------- version, what's new, update banner ---------- */
-const APP_VERSION='1.8';
+const APP_VERSION='1.9';
 const WHATSNEW=[
+ {v:'1.9',items:['⚡ Quick add — type or speak in plain words','e.g. “2 bhakri, an apple, 4100 steps, walked 30 min”','It logs foods, steps, water, exercise & weight at once']},
  {v:'1.8',items:['💬 Ask your coach — personalized tips from your own data','💊 Log supplements & protein powder (whey, tablets, omega-3)','More dishes; the app now always updates to the latest version']},
  {v:'1.7',items:['🩺 Add your lab report — get diet tips tuned to your numbers','Flags sugar, cholesterol, vitamin D/B12, thyroid & more','One tap tunes your meal plan (e.g. diabetes/thyroid mode)']},
  {v:'1.6',items:['📷 Scan food with your camera — on-device AI suggests the dish','You confirm the meal & servings; calories stay exact','Runs privately on your device — no server, no account']},
