@@ -1919,6 +1919,92 @@ function confirmPlanMeal(){
 }
 
 /* ---------- PROFILE ---------- */
+/* ---------- health report → diet ---------- */
+const MARKERS=[
+ {k:'sugar',label:'Fasting blood sugar',unit:'mg/dL',flag:v=>v>=126?'high':v>=100?'warn':v<70?'low':'good',cond:'diabetes',
+   tips:{high:'High — favour low-GI meals (jowar/bajra over rice), cut sugar, sweets & juices, add fibre and post-meal walks.',warn:'Pre-diabetes range — reduce refined carbs & sugar, add fibre and daily movement.',low:'Low — eat regular balanced meals; discuss with your doctor.'}},
+ {k:'hba1c',label:'HbA1c',unit:'%',flag:v=>v>=6.5?'high':v>=5.7?'warn':'good',cond:'diabetes',
+   tips:{high:'High — a low-GI, high-fibre pattern helps; limit sugar & refined carbs; exercise regularly.',warn:'Pre-diabetes range — cut sugar & refined carbs, add fibre & activity.'}},
+ {k:'chol',label:'Total cholesterol',unit:'mg/dL',flag:v=>v>=240?'high':v>=200?'warn':'good',
+   tips:{high:'High — reduce fried food, ghee/butter & red meat; add oats, veg, fruit, flax/omega-3; exercise.',warn:'Borderline — trim saturated fat, add fibre & activity.'}},
+ {k:'ldl',label:'LDL cholesterol',unit:'mg/dL',flag:v=>v>=130?'high':v>=100?'warn':'good',
+   tips:{high:'High "bad" cholesterol — cut fried/processed food, add soluble fibre (oats, dal), omega-3, exercise.',warn:'Borderline — reduce saturated fat, add fibre.'}},
+ {k:'hdl',label:'HDL cholesterol',unit:'mg/dL',flag:v=>v<40?'low':'good',
+   tips:{low:'Low "good" cholesterol — add healthy fats (nuts, seeds, mustard/olive oil) and regular exercise.'}},
+ {k:'trig',label:'Triglycerides',unit:'mg/dL',flag:v=>v>=200?'high':v>=150?'warn':'good',
+   tips:{high:'High — cut sugar, refined carbs & alcohol; add omega-3 (flax, fish) and exercise.',warn:'Borderline — reduce sugar & refined carbs.'}},
+ {k:'vitd',label:'Vitamin D',unit:'ng/mL',flag:v=>v<20?'low':v<30?'warn':'good',
+   tips:{low:'Deficient — sensible sun exposure, fatty fish, eggs, fortified foods; discuss a supplement with your doctor.',warn:'Insufficient — more sun, fish, eggs, fortified foods.'}},
+ {k:'b12',label:'Vitamin B12',unit:'pg/mL',flag:v=>v<200?'low':'good',
+   tips:{low:'Low — dairy, eggs, fish, meat; if vegetarian, discuss a B12 supplement with your doctor.'}},
+ {k:'hb',label:'Haemoglobin',unit:'g/dL',flag:v=>v<12?'low':'good',
+   tips:{low:'Low (possible anaemia) — iron-rich foods (dal, spinach/methi, jaggery, dates, meat) with vitamin-C foods for absorption; discuss with your doctor.'}},
+ {k:'tsh',label:'TSH (thyroid)',unit:'mIU/L',flag:v=>v>4?'high':v<0.4?'low':'good',cond:'thyroid',
+   tips:{high:'High (underactive thyroid) — adequate iodine (iodised salt, fish, dairy) & selenium (eggs, fish); cook goitrogenic veg; follow your doctor for medication.',low:'Low (overactive thyroid) — follow up with your doctor.'}},
+ {k:'uric',label:'Uric acid',unit:'mg/dL',flag:v=>v>7?'high':'good',
+   tips:{high:'High — limit organ meat, red meat & alcohol; stay well hydrated; moderate high-purine foods.'}},
+ {k:'sbp',label:'Blood pressure (systolic)',unit:'mmHg',flag:v=>v>=140?'high':v>=130?'warn':'good',
+   tips:{high:'High — reduce salt & packaged food, add potassium-rich fruit/veg, exercise; monitor and see your doctor.',warn:'Elevated — cut salt, add fruit/veg & activity.'}},
+];
+function healthCfg(){if(!DB.health)DB.health={vals:{},updatedAt:null};if(!DB.health.vals)DB.health.vals={};return DB.health;}
+function flagColor(f){return f==='good'?'var(--good)':f==='warn'?'var(--warn)':'var(--bad)';}
+function flagLabel(f){return f==='good'?'Normal':f==='warn'?'Borderline':f==='high'?'High':f==='low'?'Low':'—';}
+function healthFlags(){const H=healthCfg();return MARKERS.map(m=>{const v=H.vals[m.k];if(v==null)return null;return {m,v,f:m.flag(v)};}).filter(Boolean);}
+function openHealthForm(){
+ const hv=healthCfg().vals;
+ let x=`<div class="modal-head"><h3>Health report values</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
+ x+=`<p class="faint" style="font-size:12.5px;margin-bottom:10px">Enter the values from your lab report — fill only what you have. Or auto-read from a PDF.</p>`;
+ x+=`<button class="btn ghost sm block" style="margin-bottom:14px" onclick="readReportFile()">📄 Read from PDF report (beta)</button>`;
+ MARKERS.forEach(m=>{x+=`<div class="field" style="margin-bottom:9px"><label>${m.label} <span class="faint">(${m.unit})</span></label><input class="input" id="hv-${m.k}" type="number" step="any" inputmode="decimal" value="${hv[m.k]!=null?hv[m.k]:''}" placeholder="—"></div>`;});
+ x+=`<button class="btn block accent" style="margin-top:6px" onclick="saveHealth()">Analyse my report</button>`;
+ x+=`<p class="faint" style="font-size:11px;margin-top:10px">Reference ranges are general adult guides and vary by lab. This is not a diagnosis — review all results and any diet or medication changes with your doctor.</p>`;
+ openModal(x);
+}
+function saveHealth(){
+ const H=healthCfg();H.vals={};
+ MARKERS.forEach(m=>{const el=document.getElementById('hv-'+m.k);const v=el&&el.value!==''?+el.value:null;if(v!=null&&!isNaN(v))H.vals[m.k]=v;});
+ H.updatedAt=todayKey();save();closeModal();renderProfile();
+ toast(Object.keys(H.vals).length?'Report analysed':'Enter at least one value');
+}
+function readReportFile(){
+ const inp=document.createElement('input');inp.type='file';inp.accept='application/pdf,image/*';
+ inp.onchange=async()=>{const f=inp.files&&inp.files[0];if(!f)return;
+   if(f.type==='application/pdf'){toast('Reading PDF…');try{const text=await pdfExtract(f);const found=parseReport(text);fillHealthInputs(found);toast(Object.keys(found).length?'Found '+Object.keys(found).length+' values — please check them':'No values auto-found — enter manually');}catch(e){toast('Could not read this PDF — enter values manually');}}
+   else{toast('For a photo, please type the values in below.');}
+ };
+ inp.click();
+}
+async function pdfExtract(file){
+ const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.mjs');
+ pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.mjs';
+ const doc=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;
+ let text='';for(let i=1;i<=doc.numPages;i++){const pg=await doc.getPage(i);const c=await pg.getTextContent();text+=' '+c.items.map(it=>it.str).join(' ');}
+ return text;
+}
+function parseReport(text){
+ const t=(text||'').toLowerCase().replace(/\s+/g,' '),out={};
+ const g=re=>{const m=t.match(re);return m?parseFloat(m[1]):null;};
+ [['sugar',/(?:fasting (?:blood )?(?:sugar|glucose)|fbs|glucose fasting)[^0-9]{0,20}(\d{2,3}(?:\.\d+)?)/],
+  ['hba1c',/hba1c[^0-9]{0,15}(\d{1,2}\.\d)/],['chol',/total cholesterol[^0-9]{0,20}(\d{2,3})/],
+  ['ldl',/ldl[^0-9]{0,20}(\d{2,3})/],['hdl',/hdl[^0-9]{0,20}(\d{2,3})/],['trig',/triglycerid[es]{1,3}[^0-9]{0,20}(\d{2,3})/],
+  ['vitd',/(?:vitamin d|25[- ]?oh)[^0-9]{0,25}(\d{1,3}(?:\.\d+)?)/],['b12',/b[\s-]?12[^0-9]{0,20}(\d{2,4})/],
+  ['hb',/(?:haemoglobin|hemoglobin|hb)[^0-9]{0,15}(\d{1,2}\.\d)/],['tsh',/tsh[^0-9]{0,15}(\d{1,2}\.\d+)/],
+  ['uric',/uric acid[^0-9]{0,15}(\d\.\d+)/],['sbp',/(?:blood pressure|bp)[^0-9]{0,10}(\d{2,3})\s*\/\s*\d{2,3}/]
+ ].forEach(([k,re])=>{const v=g(re);if(v!=null)out[k]=v;});
+ return out;
+}
+function fillHealthInputs(found){MARKERS.forEach(m=>{if(found[m.k]!=null){const el=document.getElementById('hv-'+m.k);if(el)el.value=found[m.k];}});}
+function applyHealthToPlan(){
+ const conds=new Set();healthFlags().forEach(x=>{if(x.f!=='good'&&x.m.cond)conds.add(x.m.cond);});
+ const p=P();let applied='';
+ if(conds.has('diabetes')){p.condition='diabetes';applied='Diabetes';}
+ else if(conds.has('thyroid')){p.condition='thyroid';applied='Thyroid';}
+ if(!applied)return toast('No special diet mode needed from these values');
+ if(p.autoTargets)p.targets=computeTargets(p);
+ if(p.genPlan)p.genPlan=generateWeek(p);
+ save();renderProfile();toast(applied+' diet mode applied — see the Plan tab');
+}
+
 function renderProfile(){
  const p=P();const wt=currentWeight(p.id);
  let h=`<div class="section-title" style="margin-top:14px">Profiles<span class="line"></span></div>`;
@@ -1983,6 +2069,22 @@ function renderProfile(){
      <button class="btn ghost sm" style="color:var(--bad)" onclick="resetApp()">✕ Erase all</button></div>
    <div class="faint" style="font-size:12px;margin-top:10px">Your data lives only on this device. Keep a backup file so you never lose it — and to move to a new phone or laptop.</div></div>`;
  h+=`<div class="card" style="margin-top:14px"><button class="btn ghost block" onclick="showPolicy()">🛡️ Privacy & Security policy</button></div>`;
+
+ // health report
+ const HF=healthFlags();
+ const worst=HF.some(x=>x.f==='high'||x.f==='low')?'bad':HF.some(x=>x.f==='warn')?'warn':'good';
+ h+=`<div class="section-title">Health report<span class="line"></span>${HF.length?`<span class="pill ${worst}">${HF.length} values</span>`:''}</div><div class="card">`;
+ if(!HF.length){
+   h+=`<div class="track-row" style="padding-top:0"><div class="track-ic" style="background:var(--info-soft)">🩺</div>
+     <div style="flex:1"><div class="tl">Add your lab report</div><div class="ts">Get diet tips tuned to your numbers</div></div>
+     <div class="tv"><button class="btn sm" onclick="openHealthForm()">Add</button></div></div>`;
+ } else {
+   const off=HF.filter(x=>x.f!=='good');
+   h+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-family:var(--display);font-size:15px">${off.length?off.length+' to watch':'All in range 🎉'}</b><button class="btn ghost sm" onclick="openHealthForm()">Edit</button></div>`;
+   HF.forEach(x=>{h+=`<div class="nutri-row"><div class="nutri-top"><b>${x.m.label}</b><span class="tnum" style="color:${flagColor(x.f)};font-weight:800">${x.v} ${x.m.unit} · ${flagLabel(x.f)}</span></div>${x.f!=='good'&&x.m.tips[x.f]?`<div class="nutri-src faint">${esc(x.m.tips[x.f])}</div>`:''}</div>`;});
+   if(off.some(x=>x.m.cond))h+=`<button class="btn block accent" style="margin-top:12px" onclick="applyHealthToPlan()">🍽️ Tune my meal plan to this</button>`;
+ }
+ h+=`<div class="faint" style="font-size:11px;margin-top:10px">General guidance from standard reference ranges — <b>not a diagnosis</b>. Review results and any diet or medication changes with your doctor.</div></div>`;
 
  // reminders
  const rc=remindersCfg();
@@ -2280,8 +2382,9 @@ function finishOnboarding(){
 }
 
 /* ---------- version, what's new, update banner ---------- */
-const APP_VERSION='1.6';
+const APP_VERSION='1.7';
 const WHATSNEW=[
+ {v:'1.7',items:['🩺 Add your lab report — get diet tips tuned to your numbers','Flags sugar, cholesterol, vitamin D/B12, thyroid & more','One tap tunes your meal plan (e.g. diabetes/thyroid mode)']},
  {v:'1.6',items:['📷 Scan food with your camera — on-device AI suggests the dish','You confirm the meal & servings; calories stay exact','Runs privately on your device — no server, no account']},
  {v:'1.5',items:['Save & auto-backup your data to a file','Privacy & Security policy','Update & new-feature notifications','Daily reminders — water, weigh-in, evening check-in']},
  {v:'1.4',items:['Exercise → calories burned','Pedometer step counter','PCOS / thyroid / diabetes diet modes']},
