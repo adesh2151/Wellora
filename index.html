@@ -1263,6 +1263,8 @@ function renderLog(){
    <div class="progress-line" style="background:var(--ring-track);margin-top:6px"><i style="width:${clamp(net/t.cal*100,0,100)}%;background:${rem<0?'var(--bad)':'var(--accent)'}"></i></div>
  </div>`;
 
+ // scan food
+ h+=`<button class="btn accent block" style="margin-top:14px" onclick="openScan()"><svg viewBox="0 0 24 24" fill="none" style="width:18px;height:18px"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/></svg> Scan food with camera</button>`;
  // meals
  h+=`<div style="margin-top:16px">`;
  MEALMETA.forEach(([slot,label,emoji,bg])=>{
@@ -1462,6 +1464,84 @@ function addFoodEntry(o){
  d.foods.push(Object.assign({id:'f'+Math.random().toString(36).slice(2,9),slot:addSlot},o));
  delete d.sample;save();closeModal();renderLog();toast(o.n+' added');
 }
+
+/* ---------- 📷 scan food (on-device AI) ---------- */
+/* Maps common recognized labels to Wellora's food library. */
+const SCAN_MAP={
+ 'banana':'Banana','orange':'Orange / mosambi','pineapple':'Pineapple','pomegranate':'Pomegranate (dalimb)',
+ 'granny smith':'Apple','apple':'Apple','fig':'Anjeer (fig, dry)','lemon':'Amla juice (shot)',
+ 'broccoli':'Broccoli (steamed)','cauliflower':'Flower (cauliflower) bhaji','cucumber':'Cucumber (kakdi)',
+ 'bell pepper':'Bell pepper (raw)','mushroom':'Mushroom (raw)','corn':'Sweet corn (makai)','ear':'Sweet corn (makai)',
+ 'cabbage':'Kobi (cabbage) bhaji','zucchini':'Dudhi (bottle gourd) bhaji','mashed potato':'Batatyachi bhaji (potato)',
+ 'pizza':'Pizza (slice)','cheeseburger':'Veg burger','hamburger':'Veg burger','bagel':'Bread (2 slices)',
+ 'pretzel':'Khakhra','ice cream':'Ice cream','ice lolly':'Ice cream','espresso':'Black coffee / green tea',
+ 'guacamole':'Kachumber salad','burrito':'Frankie / veg roll','spaghetti':'Maggi noodles','carbonara':'Maggi noodles',
+ 'french loaf':'Bread (2 slices)','meat loaf':'Chicken keema','dough':'Chapati / poli','trifle':'Shrikhand',
+ 'consomme':'Chicken soup','hotpot':'Dal makhani','plate':null,'soup bowl':'Varan / toor dal','mixing bowl':null,
+};
+function matchFoodIdx(label){
+ label=(label||'').toLowerCase();
+ for(const k in SCAN_MAP){if(label.includes(k)){const n=SCAN_MAP[k];if(!n)return -1;const i=FOODS.findIndex(f=>f.n===n);if(i>=0)return i;}}
+ for(const w of label.split(/[ ,]+/)){if(w.length<4)continue;const i=FOODS.findIndex(f=>f.n.toLowerCase().includes(w));if(i>=0)return i;}
+ return -1;
+}
+let _clf=null;
+async function loadClassifier(onprog){
+ if(_clf)return _clf;
+ const t=await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+ t.env.allowLocalModels=false;t.env.useBrowserCache=true;
+ _clf=await t.pipeline('image-classification','Xenova/vit-base-patch16-224',{progress_callback:onprog});
+ return _clf;
+}
+function openScan(){
+ const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.capture='environment';
+ inp.onchange=()=>{const f=inp.files&&inp.files[0];if(f)scanImage(f);};
+ inp.click();
+}
+async function scanImage(file){
+ const url=URL.createObjectURL(file);
+ openModal(`<div class="modal-head"><h3>📷 Scan food</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+   <img src="${url}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:12px">
+   <div id="scanStatus" style="text-align:center;padding:14px"><div class="faint" style="font-weight:700">Analysing on your device…<div id="scanNote" style="font-weight:500;margin-top:4px">first time downloads the AI once</div></div></div>
+   <div id="scanResults"></div>`);
+ try{
+   const clf=await loadClassifier(x=>{const n=document.getElementById('scanNote');if(n&&x&&x.status==='progress')n.textContent='downloading model '+Math.round(x.progress||0)+'%';});
+   const out=await clf(url,{topk:6});
+   showScanResults(out||[]);
+ }catch(e){
+   const s=document.getElementById('scanStatus');if(s)s.innerHTML=`<div class="faint" style="margin-bottom:10px">On-device recognition isn't available here (needs Chrome/Android and the live app). You can still add the food by searching.</div><button class="btn block" onclick="closeModal();openAddFood('l')">Search food instead</button>`;
+ } finally { setTimeout(()=>URL.revokeObjectURL(url),5000); }
+}
+function scanRow(idx,conf){const f=FOODS[idx];return `<div class="sr" onclick="scanPick(${idx})"><span style="font-size:20px">${CATEMOJI[f.cat]}</span><div style="min-width:0"><div class="srn">${esc(f.n)}</div><div class="srm">${esc(f.u)} · ${f.kc} kcal</div></div>${conf!=null?`<span class="srk tnum">${Math.round(conf*100)}%</span>`:''}</div>`;}
+function showScanResults(out){
+ const seen={},matches=[];
+ out.forEach(o=>{const i=matchFoodIdx(o.label);if(i>=0&&!seen[i]){seen[i]=1;matches.push([i,o.score]);}});
+ const st=document.getElementById('scanStatus');if(st)st.style.display='none';
+ let h='';
+ if(matches.length){h+=`<div class="faint" style="font-weight:700;margin-bottom:8px">Best matches — tap the right one:</div>${matches.map(m=>scanRow(m[0],m[1])).join('')}`;}
+ else{h+=`<div class="faint" style="margin-bottom:8px">Couldn't confidently recognise this dish (Indian dishes are tricky) — search for it:</div>`;}
+ h+=`<div style="margin-top:10px"><input class="input" id="scanSearch" placeholder="Search Wellora foods…" oninput="scanFilter(this.value)" autocomplete="off"><div class="search-list" id="scanSearchList"></div></div>
+   <div class="faint" style="font-size:11.5px;margin-top:10px">The photo just suggests the dish — you confirm it. Calories & macros are then exact from Wellora's food data.</div>`;
+ document.getElementById('scanResults').innerHTML=h;
+}
+function scanFilter(q){q=(q||'').toLowerCase().trim();const list=FOODS.map((f,i)=>[f,i]).filter(([f])=>!q||f.n.toLowerCase().includes(q)||f.cat.toLowerCase().includes(q)).slice(0,25);
+ const el=document.getElementById('scanSearchList');if(el)el.innerHTML=list.map(([f,i])=>scanRow(i,null)).join('');}
+let scanFoodIdx=0,scanServ=1,scanSlot='l';
+function scanPick(idx){scanFoodIdx=idx;scanServ=1;scanSlot='l';renderScanFinal();}
+function renderScanFinal(){
+ const f=FOODS[scanFoodIdx],kc=Math.round(f.kc*scanServ);
+ let h=`<div class="modal-head"><h3>${esc(f.n)}</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
+ h+=`<div class="faint" style="font-weight:600;margin-bottom:14px">${esc(f.u)} · ${f.kc} kcal · P${f.p} C${f.c} F${f.f}</div>`;
+ h+=`<div class="field"><label>Which meal?</label><div class="seg" id="scan-slot">${MEALMETA.map(m=>`<button data-v="${m[0]}" class="${m[0]===scanSlot?'on':''}" onclick="segPick(this,'scan-slot');scanSlot='${m[0]}'">${m[2]} ${m[1]}</button>`).join('')}</div></div>`;
+ h+=`<div class="field"><label>Servings</label><div class="stepper wide" style="width:fit-content"><button onclick="scanServStep(-0.5)">−</button><input id="scanServIn" type="number" step="0.5" value="${scanServ}" oninput="scanServInput(this.value)" style="width:80px"><button onclick="scanServStep(0.5)">+</button></div></div>`;
+ h+=`<div class="card" style="background:var(--surface-2);margin-bottom:14px"><div style="display:flex;justify-content:space-between"><b>Total</b><b class="tnum" id="scanKc">${kc} kcal</b></div><div class="faint tnum" id="scanMac" style="font-size:13px;font-weight:600">P ${round(f.p*scanServ)} · C ${round(f.c*scanServ)} · F ${round(f.f*scanServ)} g</div></div>`;
+ h+=`<button class="btn block accent" onclick="scanConfirm()">Add to log</button>`;
+ openModal(h);
+}
+function scanServStep(n){scanServ=clamp(round(scanServ+n,1),0.5,15);renderScanFinal();}
+function scanServInput(v){scanServ=clamp(+v||1,0.5,30);const f=FOODS[scanFoodIdx],a=document.getElementById('scanKc');if(a){a.textContent=Math.round(f.kc*scanServ)+' kcal';document.getElementById('scanMac').textContent='P '+round(f.p*scanServ)+' · C '+round(f.c*scanServ)+' · F '+round(f.f*scanServ)+' g';}}
+function scanConfirm(){const f=FOODS[scanFoodIdx];addSlot=scanSlot;logDate=todayKey();
+ addFoodEntry({n:f.n,qty:scanServ,kc:Math.round(f.kc*scanServ),p:round(f.p*scanServ,1),c:round(f.c*scanServ,1),f:round(f.f*scanServ,1)});}
 
 /* ---------- NUTRIENTS (micronutrients) ---------- */
 function dayMicros(d){
@@ -2200,8 +2280,9 @@ function finishOnboarding(){
 }
 
 /* ---------- version, what's new, update banner ---------- */
-const APP_VERSION='1.5';
+const APP_VERSION='1.6';
 const WHATSNEW=[
+ {v:'1.6',items:['📷 Scan food with your camera — on-device AI suggests the dish','You confirm the meal & servings; calories stay exact','Runs privately on your device — no server, no account']},
  {v:'1.5',items:['Save & auto-backup your data to a file','Privacy & Security policy','Update & new-feature notifications','Daily reminders — water, weigh-in, evening check-in']},
  {v:'1.4',items:['Exercise → calories burned','Pedometer step counter','PCOS / thyroid / diabetes diet modes']},
 ];
