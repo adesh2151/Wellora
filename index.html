@@ -1031,7 +1031,7 @@ function makeProfile(o={}){
  return Object.assign({
   id:'p'+Math.random().toString(36).slice(2,8),
   name:'New profile',sex:'male',age:30,height:170,startWeight:75,goalWeight:70,
-  goal:'lose',activity:1.375,diet:'veg',
+  goal:'lose',activity:1.375,diet:'veg',condition:'none',
   targets:{cal:2000,protein:130,carb:235,fat:60,fiber:32,water:2750,steps:9000,sleep:8},
   autoTargets:true, created:todayKey()
  },o);
@@ -1070,11 +1070,16 @@ function computeTargets(p){
  else if(p.goal==='gain'){cal=tdee+350;pf=1.8;}
  else if(p.goal==='strength'){cal=tdee+150;pf=2.0;}
  else {cal=tdee;pf=1.7;}
+ // condition-aware adjustments (higher protein, lower-carb for PCOS/diabetes)
+ const cond=p.condition||'none';
+ if(cond==='pcos'||cond==='diabetes')pf=Math.max(pf,2.0);
+ const fatPct=(cond==='pcos'||cond==='diabetes')?0.32:0.27;
  cal=Math.max(1200,Math.round(cal/10)*10);
  const protein=Math.round(wt*pf);
- const fat=Math.round(cal*0.27/9);
+ const fat=Math.round(cal*fatPct/9);
  const carb=Math.round((cal-protein*4-fat*9)/4);
- return {cal,protein,carb,fat,fiber:Math.round(cal/1000*14),water:Math.round(wt*35/50)*50,
+ const fiber=Math.round(cal/1000*(cond==='diabetes'||cond==='pcos'?16:14));
+ return {cal,protein,carb,fat,fiber,water:Math.round(wt*35/50)*50,
    steps:p.goal==='gain'?7000:9000,sleep:8};
 }
 function activeTargets(p){return p.autoTargets?computeTargets(p):p.targets;}
@@ -1271,8 +1276,21 @@ function renderLog(){
  // trackers
  h+=`<div class="section-title">Activity & body<span class="line"></span></div><div class="card">`;
  h+=trackRow('💧','Water','glasses of ~250 ml','water',d.water||0,250,'var(--info-soft)','var(--info)',' ml');
- h+=trackRow('👟','Steps','today','steps',d.steps||0,500,'var(--good-soft)','var(--good)','');
- h+=trackRow('🔥','Exercise burn','kcal burned','exercise',d.exercise||0,50,'var(--accent-soft)','var(--accent)',' kcal');
+ // steps with pedometer
+ h+=`<div class="track-row"><div class="track-ic" style="background:var(--good-soft)">👟</div>
+   <div><div class="tl">Steps</div><div class="ts tnum"><span id="stepLive">${d.steps||0}</span> today${ped.active?' · <span style="color:var(--good);font-weight:800">counting…</span>':''}</div></div>
+   <div class="tv">
+     <button class="btn ${ped.active?'':'ghost'} sm" onclick="togglePed()" style="${ped.active?'background:var(--good);color:#fff':''}">${ped.active?'⏸':'▶ Auto'}</button>
+     <div class="stepper"><button onclick="setNum('steps',-500)">−</button>
+       <input id="in-steps" type="number" value="${d.steps||0}" onchange="setFieldInput('steps',this.value)">
+       <button onclick="setNum('steps',500)">+</button></div></div></div>`;
+ // exercise (auto calories)
+ const exList=d.exercises||[], exTotal=exList.reduce((s,x)=>s+x.kc,0);
+ h+=`<div class="track-row" style="align-items:flex-start"><div class="track-ic" style="background:var(--accent-soft)">🔥</div>
+   <div style="flex:1"><div class="tl">Exercise <span class="faint tnum" style="font-weight:700">· ${exTotal} kcal burned</span></div>
+     ${exList.map(x=>`<div class="food-item" style="padding:8px 0"><div style="min-width:0"><div class="fn" style="font-size:13.5px">${esc(x.n)}</div><div class="fm tnum">${x.min} min · ${x.kc} kcal</div></div><button class="del" onclick="delExercise('${x.id}')" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`).join('')}
+     <div class="add-food" onclick="openExercise()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add exercise</div>
+   </div></div>`;
  h+=`<div class="track-row"><div class="track-ic" style="background:var(--primary-soft)">⚖️</div>
    <div><div class="tl">Weight</div><div class="ts">morning, empty stomach</div></div>
    <div class="tv"><div class="stepper wide"><button onclick="setNum('weight',-0.1)">−</button>
@@ -1314,6 +1332,70 @@ function setWeightInput(v){const d=dayLog(P().id,logDate);d.weight=v===''?null:r
 function setSleepInput(v){const d=dayLog(P().id,logDate);d.sleep=round(clamp(+v||0,0,16),1);delete d.sample;save();renderLog();}
 function toggleHabit(i){const d=dayLog(P().id,logDate);d.habits[i]=!d.habits[i];delete d.sample;save();renderLog();}
 function delFood(id){const d=dayLog(P().id,logDate);d.foods=d.foods.filter(f=>f.id!==id);save();renderLog();if(cur==='dash')renderDash();}
+
+/* ---------- exercise → calories (MET based) ---------- */
+const EXERCISES=[
+ {n:'Walking (brisk)',met:4.3,icon:'🚶'},{n:'Walking (casual)',met:3.0,icon:'🚶'},
+ {n:'Running / jogging',met:7.0,icon:'🏃'},{n:'Running (fast)',met:10.0,icon:'🏃'},
+ {n:'Cycling',met:6.8,icon:'🚴'},{n:'Skipping rope',met:11.0,icon:'🪢'},
+ {n:'Yoga',met:3.0,icon:'🧘'},{n:'Surya Namaskar',met:4.5,icon:'🙏'},
+ {n:'Strength training',met:5.0,icon:'🏋️'},{n:'Bodyweight workout',met:5.0,icon:'💪'},
+ {n:'HIIT',met:8.0,icon:'🔥'},{n:'Swimming',met:6.0,icon:'🏊'},
+ {n:'Dancing / Zumba',met:6.5,icon:'💃'},{n:'Stairs climbing',met:8.0,icon:'🪜'},
+ {n:'Cricket',met:5.0,icon:'🏏'},{n:'Football',met:7.0,icon:'⚽'},
+ {n:'Badminton',met:5.5,icon:'🏸'},{n:'Gym cardio',met:5.0,icon:'🏃'},
+ {n:'Trekking / hiking',met:6.0,icon:'🥾'},{n:'Household chores',met:3.3,icon:'🧹'},
+];
+let exSel=EXERCISES[0], exMin=30;
+function exKc(){const wt=currentWeight(P().id);return Math.round(exSel.met*wt*(exMin/60));}
+function openExercise(){exSel=EXERCISES[0];exMin=30;renderExerciseModal();}
+function renderExerciseModal(){
+ let h=`<div class="modal-head"><h3>Add exercise</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
+ h+=`<div class="chip-list" style="max-height:190px;overflow-y:auto">${EXERCISES.map((e,i)=>`<button class="fchip" style="${e===exSel?'border-color:var(--primary);color:var(--primary);background:var(--primary-soft)':''}" onclick="selectEx(${i})">${e.icon} ${e.n}<small>MET ${e.met}</small></button>`).join('')}</div>`;
+ h+=`<div class="field" style="margin-top:14px"><label>Duration (minutes)</label>
+   <div class="stepper wide" style="width:fit-content"><button onclick="exMinStep(-5)">−</button><input id="exMinIn" type="number" inputmode="numeric" value="${exMin}" oninput="exMinInput(this.value)" style="width:80px"><button onclick="exMinStep(5)">+</button></div></div>`;
+ h+=`<div class="card" style="background:var(--surface-2);margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center"><b id="exName">${exSel.icon} ${esc(exSel.n)}</b><b class="tnum" id="exKcPrev">${exKc()} kcal</b></div>
+   <div class="faint" style="font-size:12px;margin-top:2px">Estimated from your weight (${round(currentWeight(P().id),1)} kg) × MET × time.</div></div>`;
+ h+=`<button class="btn block accent" onclick="addExercise()">Add to today</button>`;
+ openModal(h);
+}
+function selectEx(i){exSel=EXERCISES[i];renderExerciseModal();}
+function exMinStep(n){exMin=clamp((+exMin||0)+n,5,600);renderExerciseModal();}
+function exMinInput(v){exMin=clamp(Math.round(+v||0),0,600);const a=document.getElementById('exKcPrev');if(a)a.textContent=exKc()+' kcal';}
+function addExercise(){
+ if(exMin<1)return toast('Set a duration');
+ const d=dayLog(P().id,logDate);d.exercises=d.exercises||[];
+ d.exercises.push({id:'x'+Math.random().toString(36).slice(2,9),n:exSel.n,met:exSel.met,min:exMin,kc:exKc()});
+ d.exercise=d.exercises.reduce((s,x)=>s+x.kc,0);delete d.sample;save();closeModal();renderLog();toast(exSel.n+' added');
+}
+function delExercise(id){const d=dayLog(P().id,logDate);d.exercises=(d.exercises||[]).filter(x=>x.id!==id);
+ d.exercise=d.exercises.reduce((s,x)=>s+x.kc,0);save();renderLog();}
+
+/* ---------- pedometer (device motion, foreground only) ---------- */
+let ped={active:false,filt:9.8,lastStep:0,acc:0};
+function togglePed(){ped.active?pedStop():pedStart();}
+function pedStart(){
+ const begin=()=>{ped.active=true;ped.filt=9.8;ped.lastStep=0;window.addEventListener('devicemotion',pedHandler);renderLog();toast('Step counter on 👟');};
+ if(typeof DeviceMotionEvent==='undefined')return toast('No motion sensor on this device');
+ if(typeof DeviceMotionEvent.requestPermission==='function'){
+   DeviceMotionEvent.requestPermission().then(s=>s==='granted'?begin():toast('Motion permission denied')).catch(()=>toast('Motion not available'));
+ } else begin();
+}
+function pedStop(){ped.active=false;window.removeEventListener('devicemotion',pedHandler);if(ped.acc){savePedSteps();}renderLog();toast('Step counter off');}
+function pedHandler(e){
+ const a=e.accelerationIncludingGravity;if(!a||a.x==null)return;
+ const mag=Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z);
+ ped.filt=ped.filt*0.9+mag*0.1;
+ const dyn=mag-ped.filt,now=Date.now();
+ if(dyn>1.15&&now-ped.lastStep>280){ped.lastStep=now;pedStep();}
+}
+function pedStep(){
+ const d=dayLog(P().id,todayKey());d.steps=(d.steps||0)+1;ped.acc++;
+ const el=document.getElementById('stepLive');if(el)el.textContent=d.steps;
+ const inp=document.getElementById('in-steps');if(inp)inp.value=d.steps;
+ if(ped.acc>=10)savePedSteps();
+}
+function savePedSteps(){ped.acc=0;delete dayLog(P().id,todayKey()).sample;save();}
 
 /* ---------- add food modal ---------- */
 let addSlot='b';
@@ -1538,17 +1620,21 @@ function reKc(e){const f=foodByName(e.n);e.kc=Math.round(f.kc*e.qty);e.p=round(f
 function nudge(e,dkc){const f=foodByName(e.n);e.qty=clamp(Math.round((e.qty+dkc/f.kc)*2)/2,0.5,4);reKc(e);}
 function generateWeek(p){
  const t=activeTargets(p),cal=t.cal,diet=p.diet||'veg';
+ const cond=p.condition||'none', lowGI=(cond==='pcos'||cond==='diabetes');
+ const fruitPool=lowGI?['Guava','Apple','Orange / mosambi','Pomegranate (dalimb)','Papaya']:GEN.fruits;
  const meals={};
  GEN_DAYS.forEach((day,i)=>{
    const bB=cal*GEN.split.b,bL=cal*GEN.split.l,bD=cal*GEN.split.d;
+   // low-GI: prefer millet bhakri (jowar/bajra/ragi) over wheat/rice
+   const breadPool=lowGI?['Jowar bhakri','Bajra bhakri','Nachni (ragi) bhakri']:GEN.breads;
    const bf=[scaleTo(pk(GEN.breakfast,i),bB*0.6)];
    if(diet!=='veg')bf.push(mkEntry(pk(GEN.bfProtein,i),1));
    bf.push(mkEntry(pk(GEN.bfDairy,i),diet==='veg'?1:0.75));
-   const sn=[mkEntry(pk(GEN.fruits,i),1),mkEntry(pk(GEN.seeds,i),1.5)];
-   const ln=[scaleTo(pk(GEN.breads,i),bL*0.42),mkEntry(pk(GEN.dals,i),1),mkEntry(pk(GEN.veg,i),1),mkEntry(pk(GEN.sides,i),1)];
+   const sn=[mkEntry(pk(fruitPool,i),1),mkEntry(pk(GEN.seeds,i),1.5)];
+   const ln=[scaleTo(pk(breadPool,i),bL*0.42),mkEntry(pk(GEN.dals,i),1),mkEntry(pk(GEN.veg,i),1),mkEntry(pk(GEN.sides,i),1)];
    let dn;
    if(diet==='veg'){dn=[scaleTo(pk(GEN.dinnerVeg,i),bD*0.5),mkEntry(pk(['Paneer','Tofu','Rajma masala','Chana (chickpea) usal'],i),0.75),mkEntry(pk(GEN.veg,i+3),1)];}
-   else{dn=[mkEntry(pk(GEN.protein[diet],i),1),scaleTo(i%2?GEN.rice:pk(GEN.breads,i+2),bD*0.32),mkEntry(pk(GEN.veg,i+5),1)];}
+   else{dn=[mkEntry(pk(GEN.protein[diet],i),1),scaleTo(lowGI?pk(breadPool,i+2):(i%2?GEN.rice:pk(GEN.breads,i+2)),bD*0.32),mkEntry(pk(GEN.veg,i+5),1)];}
    const M={b:bf.filter(Boolean),s:sn.filter(Boolean),l:ln.filter(Boolean),d:dn.filter(Boolean)};
    // normalize daily total toward calorie target via flex starch/main items
    let total=['b','s','l','d'].reduce((a,k)=>a+mealKc(M[k]),0),guard=0;
@@ -1559,8 +1645,14 @@ function generateWeek(p){
    }
    meals[day]=M;
  });
- return {createdAt:todayKey(),diet,goal:p.goal,cal,meals};
+ return {createdAt:todayKey(),diet,goal:p.goal,condition:cond,cal,meals};
 }
+const CONDITION_TIPS={
+ pcos:{t:'PCOS / PCOD',tips:['Protein at every meal; more veg & seeds (flax)','Low-GI grains — jowar, bajra, ragi over rice/maida','Limit sugar, sweets, fruit juices & refined carbs','Regular movement + strength training helps insulin']},
+ thyroid:{t:'Thyroid',tips:['Iodine (iodised salt, fish, dairy) + selenium (eggs, fish)','Cook goitrogenic veg (cabbage, cauliflower) — avoid large raw amounts','Adequate protein; regular, balanced meals','Follow your doctor for medication & TSH levels']},
+ diabetes:{t:'Diabetes / pre-diabetes',tips:['Low-GI, high-fibre meals; bhakri over rice','Avoid sugary drinks, juices & sweets','Pair carbs with protein + veg to slow sugar spikes','Consistent timing; a short walk after meals']},
+};
+const CONDITIONS={none:'None',pcos:'PCOS / PCOD',thyroid:'Thyroid',diabetes:'Diabetes'};
 const SESSIONS={
  strA:{focus:'Full-body strength A',icon:'💪',items:['Goblet / chair squat — 3×12','Push-up (wall → knee → full) — 3×10','Bent-over row (band/backpack) — 3×12','Hip hinge / Romanian deadlift — 3×10','Plank — 3×30 s']},
  strB:{focus:'Full-body strength B',icon:'🏋️',items:['Split squat / lunges — 3×10 each leg','Incline push-up — 3×12','Single-arm row — 3×12 each','Glute bridge — 3×15','Dead bug — 3×10']},
@@ -1640,6 +1732,14 @@ function renderPlan(){
      <div><b>Seed rotation:</b> ${esc(pd.seed)}<div class="faint" style="font-weight:600;font-size:12px;margin-top:2px">Weigh seeds — nutrient-dense but calorie-dense.</div></div></div></div>`;
  }
 
+ // condition guidance
+ const cond=(gp&&gp.condition)||p.condition||'none';
+ if(cond!=='none'&&CONDITION_TIPS[cond]){const ct=CONDITION_TIPS[cond];
+   h+=`<div class="section-title">${ct.t} — eating tips<span class="line"></span><span class="pill info">condition</span></div>
+     <div class="card">${ct.tips.map(x=>`<div class="check" style="cursor:default"><span class="box" style="border-radius:6px;border-color:var(--info);background:var(--info-soft)">✓</span><span class="ctxt" style="font-weight:600">${esc(x)}</span></div>`).join('')}
+     <div class="faint" style="font-size:11.5px;margin-top:10px">General guidance for a healthy lifestyle — not a substitute for your doctor's or dietitian's advice, especially for medication and lab targets.</div></div>`;
+ }
+
  // workout
  const gk=WEEK_PATTERN[p.goal]||WEEK_PATTERN.lose;
  const sess=SESSIONS[gk[GEN_DAYS.indexOf(day)]];
@@ -1679,6 +1779,8 @@ function openGenerator(){
     ${Object.entries(GOALS).map(([k,v])=>`<button data-v="${k}" class="${p.goal===k?'on':''}" onclick="segPick(this,'gen-goal')">${v.icon} ${v.label}</button>`).join('')}</div></div>`;
  h+=`<div class="field"><label>Food preference</label><div class="seg" id="gen-diet">
     ${Object.entries(DIETS).map(([k,v])=>`<button data-v="${k}" class="${(p.diet||'veg')===k?'on':''}" onclick="segPick(this,'gen-diet')">${v.icon} ${v.label}</button>`).join('')}</div></div>`;
+ h+=`<div class="field"><label>Health condition (optional)</label><div class="seg" id="gen-cond" style="flex-wrap:wrap">
+    ${Object.entries(CONDITIONS).map(([k,v])=>`<button data-v="${k}" class="${(p.condition||'none')===k?'on':''}" onclick="segPick(this,'gen-cond')">${v}</button>`).join('')}</div></div>`;
  h+=`<button class="btn block accent" style="margin-top:6px" onclick="doGenerate()">✨ Generate 7-day plan</button>`;
  openModal(h);
 }
@@ -1686,6 +1788,7 @@ function doGenerate(){
  const p=P();
  p.goal=segVal('gen-goal')||p.goal;
  p.diet=segVal('gen-diet')||p.diet||'veg';
+ p.condition=segVal('gen-cond')||p.condition||'none';
  if(p.autoTargets)p.targets=computeTargets(p);
  p.genPlan=generateWeek(p);
  save();updateChip();closeModal();renderPlan();toast('Your plan is ready ✨');

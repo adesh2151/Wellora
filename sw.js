@@ -1,6 +1,6 @@
 /* Wellora service worker — offline-first for the app shell.
    Bump CACHE when you change cached files so clients update. */
-const CACHE = 'wellora-v9';
+const CACHE = 'wellora-v10';
 const SHELL = [
   '.', 'index.html', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
