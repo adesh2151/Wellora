@@ -1,16 +1,19 @@
 /* Wellora service worker — offline-first for the app shell.
    Bump CACHE when you change cached files so clients update. */
-const CACHE = 'wellora-v11';
+const CACHE = 'wellora-v12';
 const SHELL = [
   '.', 'index.html', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
   'icons/apple-touch-icon.png'
 ];
 
+// Do NOT skipWaiting automatically — the page shows an "Update" banner and
+// tells us to activate only when the user taps it.
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())
-  );
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
+});
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {

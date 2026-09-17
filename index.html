@@ -396,6 +396,14 @@ a.link{color:var(--primary);font-weight:700;text-decoration:none}
 .ob-card h3{font-size:16px;margin-bottom:14px}
 .ob-note{text-align:center;color:rgba(255,255,255,.7);font-size:11.5px;font-weight:500;margin-top:14px;line-height:1.5}
 
+/* ---- update banner ---- */
+.upd-banner{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h) + 12px + env(safe-area-inset-bottom));z-index:300;
+  max-width:520px;margin:0 auto;background:linear-gradient(135deg,var(--primary),#0c5a50);color:#fff;border-radius:14px;
+  padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);font-weight:600;font-size:13.5px;animation:rise .4s ease both}
+.upd-banner span{flex:1}
+.upd-banner button{background:#fff;color:var(--primary);border-radius:9px;padding:8px 15px;font-weight:800;font-size:13px;white-space:nowrap}
+.upd-banner button:active{transform:scale(.96)}
+
 @media (prefers-reduced-motion:reduce){
   .tab-pane.active .card,.tab-pane.active .rings>*{animation:none}
   .ring-wrap svg circle:last-of-type{transition:none}
@@ -1896,6 +1904,17 @@ function renderProfile(){
    <div class="faint" style="font-size:12px;margin-top:10px">Your data lives only on this device. Keep a backup file so you never lose it — and to move to a new phone or laptop.</div></div>`;
  h+=`<div class="card" style="margin-top:14px"><button class="btn ghost block" onclick="showPolicy()">🛡️ Privacy & Security policy</button></div>`;
 
+ // reminders
+ const rc=remindersCfg();
+ const permBlocked=('Notification' in window)&&Notification.permission==='denied';
+ h+=`<div class="section-title">Reminders<span class="line"></span></div><div class="card">`;
+ h+=remRow('💧','Water','every '+rc.waterEvery+' hr, 8am–10pm','water',rc.water,`<div class="stepper"><button onclick="setWaterEvery(${rc.waterEvery-1})">−</button><input value="${rc.waterEvery}" onchange="setWaterEvery(this.value)" style="width:36px"><button onclick="setWaterEvery(${rc.waterEvery+1})">+</button></div>`);
+ h+=remRow('🍽️','Meals','breakfast · lunch · dinner','meals',rc.meals,'');
+ h+=remRow('⚖️','Morning weigh-in','','weighin',rc.weighin,remTime('weighinTime',rc.weighinTime));
+ h+=remRow('👟','Move / steps','if behind your step goal','move',rc.move,remTime('moveTime',rc.moveTime));
+ h+=remRow('🎯','Daily targets check-in',"what you're still short on",'targets',rc.targets,remTime('targetsTime',rc.targetsTime));
+ h+=`<div class="faint" style="font-size:11.5px;margin-top:10px">Reminders appear while Wellora is open or installed on your home screen. ${permBlocked?'<b style="color:var(--bad)">Notifications are blocked — turn them on in your browser/site settings.</b>':'Turning one on will ask permission to show notifications.'}</div></div>`;
+
  h+=`<div class="section-title">App lock<span class="line"></span></div>
    <div class="card">
      <div class="track-row" style="padding-top:0">
@@ -2180,17 +2199,99 @@ function finishOnboarding(){
  updateChip();renderDash();go('dash');toast('Welcome, '+name+'! 🌱');
 }
 
+/* ---------- version, what's new, update banner ---------- */
+const APP_VERSION='1.5';
+const WHATSNEW=[
+ {v:'1.5',items:['Save & auto-backup your data to a file','Privacy & Security policy','Update & new-feature notifications','Daily reminders — water, weigh-in, evening check-in']},
+ {v:'1.4',items:['Exercise → calories burned','Pedometer step counter','PCOS / thyroid / diabetes diet modes']},
+];
+function checkWhatsNew(){
+ if(needsOnboarding())return;
+ let seen=null;try{seen=localStorage.getItem('wellora.seenVersion');}catch(e){}
+ if(seen===APP_VERSION)return;
+ try{localStorage.setItem('wellora.seenVersion',APP_VERSION);}catch(e){}
+ if(!seen)return; // brand-new user just onboarded — don't pop What's New
+ setTimeout(showWhatsNew,600);
+}
+function showWhatsNew(){
+ const l=WHATSNEW[0];
+ openModal(`<div class="modal-head"><h3>✨ What's new</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+   <div class="pill pri" style="margin-bottom:12px">Wellora v${l.v}</div>
+   ${l.items.map(x=>`<div class="check" style="cursor:default"><span class="box" style="background:var(--primary);border-color:var(--primary)"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ctxt" style="font-weight:600">${esc(x)}</span></div>`).join('')}
+   <button class="btn block" style="margin-top:14px" onclick="closeModal()">Got it 🎉</button>`);
+}
+let _updReg=null;
+function showUpdateBanner(reg){
+ _updReg=reg;
+ if(document.getElementById('updBanner'))return;
+ const b=el('div','upd-banner');b.id='updBanner';
+ b.innerHTML=`<span>🎉 A new version of Wellora is ready</span><button onclick="applyUpdate()">Update</button>`;
+ document.body.appendChild(b);
+}
+function applyUpdate(){if(_updReg&&_updReg.waiting)_updReg.waiting.postMessage({type:'SKIP_WAITING'});const b=document.getElementById('updBanner');if(b)b.querySelector('span').textContent='Updating…';}
+
+/* ---------- reminders (foreground, use-case aware) ---------- */
+const REM_DEFAULTS={water:false,waterEvery:2,meals:false,weighin:false,weighinTime:'07:30',move:false,moveTime:'18:00',targets:false,targetsTime:'21:00'};
+function remindersCfg(){if(!DB.reminders)DB.reminders={};for(const k in REM_DEFAULTS)if(DB.reminders[k]===undefined)DB.reminders[k]=REM_DEFAULTS[k];return DB.reminders;}
+function anyReminderOn(){const r=remindersCfg();return r.water||r.meals||r.weighin||r.move||r.targets;}
+let reminderTimer=null,remFired={};
+function startReminders(){clearInterval(reminderTimer);reminderTimer=setInterval(checkReminders,60000);checkReminders();}
+function hhmm(d){return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function checkReminders(){
+ if(needsOnboarding()||!anyReminderOn())return;
+ const r=remindersCfg(),now=new Date(),hm=hhmm(now),tk=todayKey();
+ if(r.weighin&&hm===r.weighinTime)fireReminder('weighin-'+tk,'⚖️ Morning weigh-in',"Log today's weight to track your trend.");
+ if(r.meals){
+   if(hm==='08:30')fireReminder('bf-'+tk,'🍳 Breakfast time','Log your breakfast in Wellora.');
+   if(hm==='13:00')fireReminder('ln-'+tk,'🍛 Lunch time','Log your lunch in Wellora.');
+   if(hm==='20:00')fireReminder('dn-'+tk,'🌙 Dinner time','Log your dinner in Wellora.');
+ }
+ if(r.water){const h=now.getHours();if(h>=8&&h<=22&&now.getMinutes()===0&&(h-8)%(r.waterEvery||2)===0)fireReminder('water-'+tk+'-'+h,'💧 Water break','Have a glass of water to hit your goal.');}
+ if(r.move&&hm===r.moveTime){const c=dayCtx();const left=Math.max(0,(c.t.steps||0)-(c.d.steps||0));if(left>500)fireReminder('move-'+tk,'👟 '+fmtK(left)+' steps to go','A short walk will get you to your goal today.');}
+ if(r.targets&&hm===r.targetsTime){const m=targetsSummary();if(m)fireReminder('targets-'+tk,"🎯 Today's check-in",m);}
+}
+function dayCtx(){const p=P(),t=activeTargets(p),d=dayLog(p.id,todayKey());return {p,t,d};}
+function targetsSummary(){
+ const c=dayCtx(),tot=dayTotals(c.d),t=c.t,d=c.d,parts=[];
+ const calLeft=t.cal-(tot.kc-(d.exercise||0));
+ if(calLeft>150)parts.push(calLeft+' kcal left');else if(calLeft<-150)parts.push(Math.abs(calLeft)+' kcal over');
+ const pLeft=t.protein-tot.p;if(pLeft>15)parts.push(pLeft+'g protein');
+ const wLeft=(t.water||2500)-(d.water||0);if(wLeft>250)parts.push(Math.round(wLeft/250)+' glasses water');
+ const sLeft=(t.steps||0)-(d.steps||0);if(sLeft>1000)parts.push(fmtK(sLeft)+' steps');
+ if(!parts.length)return "You've hit your targets today — great work! 🎉";
+ return 'Still to go: '+parts.slice(0,3).join(', ')+'.';
+}
+function fireReminder(key,title,body){
+ if(remFired[key])return;remFired[key]=1;
+ try{if('Notification' in window&&Notification.permission==='granted'){new Notification(title,{body,icon:'icons/icon-192.png',tag:key,badge:'icons/icon-192.png'});return;}}catch(e){}
+ toast(title);
+}
+function toggleReminder(kind){
+ const r=remindersCfg();r[kind]=!r[kind];save();
+ if(r[kind]&&'Notification' in window&&Notification.permission==='default'){Notification.requestPermission().then(()=>renderProfile());}
+ startReminders();renderProfile();
+}
+function setReminderTime(kind,v){remindersCfg()[kind]=v;save();}
+function setWaterEvery(v){remindersCfg().waterEvery=clamp(+v||2,1,6);save();renderProfile();}
+function remRow(icon,title,sub,kind,on,extra){
+ return `<div class="track-row"><div class="track-ic" style="background:var(--surface-2)">${icon}</div>
+   <div style="flex:1;min-width:0"><div class="tl">${title}</div>${sub?`<div class="ts">${sub}</div>`:''}</div>
+   <div class="tv">${on?extra:''}<button class="btn ${on?'':'ghost'} sm" style="${on?'background:var(--good);color:#fff':''}" onclick="toggleReminder('${kind}')">${on?'On':'Off'}</button></div></div>`;
+}
+function remTime(kind,val){return `<input type="time" class="input" style="width:112px;padding:7px 8px" value="${val}" onchange="setReminderTime('${kind}',this.value)">`;}
+
 /* ---------- boot ---------- */
 applyTheme();updateChip();
-requestPersist();loadFsHandle();
+requestPersist();loadFsHandle();startReminders();
 if(!needsOnboarding())renderDash();
 (function(){
  const s=document.getElementById('splash');
  const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
  let done=false;
  const proceed=()=>{if(done)return;done=true;if(s)s.hidden=true;
-   if(needsOnboarding())showOnboarding();
-   else if(authEnabled())showLock();};
+   if(needsOnboarding()){showOnboarding();}
+   else if(authEnabled()){showLock();}
+   else{checkWhatsNew();}};
  setTimeout(proceed,reduced?1250:2300);
  if(s)s.addEventListener('click',proceed);
 })();
@@ -2207,7 +2308,17 @@ function showInstallBtn(){
  document.querySelector('header.top').insertBefore(b,document.getElementById('themeBtn'));
 }
 if('serviceWorker' in navigator){
- window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+ window.addEventListener('load',()=>{
+   navigator.serviceWorker.register('sw.js').then(reg=>{
+     if(reg.waiting&&navigator.serviceWorker.controller)showUpdateBanner(reg);
+     reg.addEventListener('updatefound',()=>{
+       const nw=reg.installing;if(!nw)return;
+       nw.addEventListener('statechange',()=>{if(nw.state==='installed'&&navigator.serviceWorker.controller)showUpdateBanner(reg);});
+     });
+   }).catch(()=>{});
+   let reloaded=false;
+   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;location.reload();});
+ });
 }
 </script>
 </body>
