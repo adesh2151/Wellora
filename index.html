@@ -330,6 +330,15 @@ a.link{color:var(--primary);font-weight:700;text-decoration:none}
 .modal{box-shadow:0 -8px 40px rgba(10,20,17,.25)}
 .pill{transition:transform .12s ease}
 
+.nutri-row{padding:11px 0;border-top:1px solid var(--border)}
+.nutri-row:first-child{border-top:none}
+.nutri-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.nutri-top b{font-size:14px}
+.nutri-top span{font-size:12px;font-weight:700;color:var(--ink-soft);flex:none}
+.nbar{height:8px;border-radius:5px;background:var(--ring-track);overflow:hidden;margin:7px 0 4px}
+.nbar i{display:block;height:100%;border-radius:5px}
+.nutri-src{font-size:11.5px;font-weight:600}
+
 @media (prefers-reduced-motion:reduce){
   .tab-pane.active .card,.tab-pane.active .rings>*{animation:none}
   .ring-wrap svg circle:last-of-type{transition:none}
@@ -356,6 +365,7 @@ a.link{color:var(--primary);font-weight:700;text-decoration:none}
     <section class="tab-pane active" id="pane-dash"></section>
     <section class="tab-pane" id="pane-log"></section>
     <section class="tab-pane" id="pane-progress"></section>
+    <section class="tab-pane" id="pane-nutri"></section>
     <section class="tab-pane" id="pane-plan"></section>
     <section class="tab-pane" id="pane-profile"></section>
   </main>
@@ -365,7 +375,8 @@ a.link{color:var(--primary);font-weight:700;text-decoration:none}
   <div class="tabs-inner">
     <button class="tab-btn active" data-tab="dash"><span class="tb-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M3 12l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Home</button>
     <button class="tab-btn" data-tab="log"><span class="tb-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v6M9 3v4M15 3v4M9 9h6a3 3 0 0 1 0 6h-1v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Log</button>
-    <button class="tab-btn" data-tab="progress"><span class="tb-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Progress</button>
+    <button class="tab-btn" data-tab="progress"><span class="tb-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Stats</button>
+    <button class="tab-btn" data-tab="nutri"><span class="tb-ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 20c0-8.3 5.6-14 15-14 0 8.3-5.6 14-15 14Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 20c4.5-6.5 8.5-9.3 13-10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Nutri</button>
     <button class="tab-btn" data-tab="plan"><span class="tb-ic"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M4 9h16M9 3v4M15 3v4M8 14h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Plan</button>
     <button class="tab-btn" data-tab="profile"><span class="tb-ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Profile</button>
   </div>
@@ -551,9 +562,307 @@ const FOODS=[
  {n:'Papad (roasted)',u:'2 pcs',kc:70,p:4,c:10,f:1,cat:'Other'},
  {n:'Lonche (pickle)',u:'1 tbsp',kc:40,p:0.3,c:2,f:3.5,cat:'Other'},
  {n:'Thecha / chutney',u:'1 tbsp',kc:35,p:1,c:3,f:2,cat:'Other'},
+
+ /* ---- more breads & rice ---- */
+ {n:'Plain paratha',u:'1',kc:180,p:4,c:26,f:7,cat:'Grains'},
+ {n:'Aloo paratha',u:'1',kc:250,p:6,c:36,f:9,cat:'Grains'},
+ {n:'Methi paratha',u:'1',kc:200,p:5,c:28,f:8,cat:'Grains'},
+ {n:'Puri',u:'2 pcs',kc:200,p:3,c:24,f:10,cat:'Grains'},
+ {n:'Bhatura',u:'1',kc:230,p:5,c:32,f:9,cat:'Grains'},
+ {n:'Naan',u:'1',kc:260,p:7,c:44,f:6,cat:'Grains'},
+ {n:'Tandoori roti',u:'1',kc:130,p:4,c:26,f:1.5,cat:'Grains'},
+ {n:'Bread (2 slices)',u:'2 slices',kc:140,p:5,c:26,f:2,cat:'Grains'},
+ {n:'Brown bread (2 slices)',u:'2 slices',kc:130,p:6,c:24,f:2,cat:'Grains'},
+ {n:'Oats (cooked)',u:'1 bowl',kc:190,p:7,c:32,f:4,cat:'Grains'},
+ {n:'Dalia (broken wheat)',u:'1 bowl',kc:200,p:7,c:38,f:3,cat:'Grains'},
+ {n:'Veg pulao',u:'1 plate',kc:320,p:7,c:52,f:9,cat:'Grains'},
+ {n:'Veg biryani',u:'1 plate',kc:400,p:9,c:60,f:13,cat:'Grains'},
+ {n:'Chicken biryani',u:'1 plate',kc:480,p:24,c:56,f:18,cat:'Grains'},
+ {n:'Fried rice',u:'1 plate',kc:340,p:8,c:56,f:9,cat:'Grains'},
+ {n:'Tomato / lemon rice',u:'1 plate',kc:300,p:5,c:52,f:8,cat:'Grains'},
+
+ /* ---- more dals & kadhi ---- */
+ {n:'Kulith (horsegram) usal',u:'1 katori',kc:190,p:12,c:26,f:3,cat:'Dals'},
+ {n:'Val / birdyachi usal',u:'1 katori',kc:200,p:11,c:28,f:5,cat:'Dals'},
+ {n:'Chana dal',u:'1 katori',kc:180,p:10,c:26,f:3,cat:'Dals'},
+ {n:'Dal fry / tadka',u:'1 katori',kc:200,p:9,c:24,f:8,cat:'Dals'},
+ {n:'Sambar',u:'1 katori',kc:150,p:7,c:22,f:4,cat:'Dals'},
+ {n:'Kadhi (besan)',u:'1 katori',kc:150,p:5,c:14,f:8,cat:'Dals'},
+ {n:'Dal makhani',u:'1 katori',kc:280,p:11,c:28,f:14,cat:'Dals'},
+
+ /* ---- more vegetables ---- */
+ {n:'Tomato sabji',u:'1 katori',kc:100,p:2,c:12,f:5,cat:'Veg'},
+ {n:'Karle (bitter gourd)',u:'1 katori',kc:110,p:3,c:12,f:6,cat:'Veg'},
+ {n:'Gilke / dodka (ridge gourd)',u:'1 katori',kc:90,p:2,c:10,f:5,cat:'Veg'},
+ {n:'Suran / ratalu (yam)',u:'1 katori',kc:150,p:2,c:28,f:4,cat:'Veg'},
+ {n:'Beetroot sabji',u:'1 katori',kc:110,p:3,c:16,f:4,cat:'Veg'},
+ {n:'Carrot-peas (gajar-matar)',u:'1 katori',kc:120,p:4,c:16,f:5,cat:'Veg'},
+ {n:'Matar (green peas)',u:'1 katori',kc:130,p:6,c:18,f:4,cat:'Veg'},
+ {n:'Farasbi (french beans)',u:'1 katori',kc:100,p:3,c:12,f:5,cat:'Veg'},
+ {n:'Bhopla (pumpkin) bhaji',u:'1 katori',kc:100,p:2,c:14,f:5,cat:'Veg'},
+ {n:'Capsicum sabji',u:'1 katori',kc:110,p:2,c:12,f:6,cat:'Veg'},
+ {n:'Mushroom masala',u:'1 katori',kc:140,p:5,c:10,f:9,cat:'Veg'},
+ {n:'Palak paneer',u:'1 katori',kc:230,p:11,c:12,f:16,cat:'Veg'},
+ {n:'Paneer butter masala',u:'1 katori',kc:320,p:13,c:14,f:24,cat:'Veg'},
+ {n:'Sweet corn (makai)',u:'1 bowl',kc:130,p:4,c:27,f:2,cat:'Veg'},
+
+ /* ---- more non-veg ---- */
+ {n:'Omelette (2 eggs)',u:'2 eggs',kc:220,p:14,c:2,f:17,cat:'Protein'},
+ {n:'Pomfret / surmai fry',u:'2 pcs',kc:280,p:32,c:5,f:15,cat:'Protein'},
+ {n:'Crab masala',u:'1 katori',kc:220,p:22,c:6,f:12,cat:'Protein'},
+ {n:'Tisrya (clams) masala',u:'1 katori',kc:180,p:20,c:8,f:8,cat:'Protein'},
+ {n:'Chicken tikka',u:'6 pcs',kc:280,p:34,c:6,f:13,cat:'Protein'},
+ {n:'Chicken lollipop (fried)',u:'4 pcs',kc:360,p:26,c:12,f:22,cat:'Protein'},
+ {n:'Soya chunks curry',u:'1 katori',kc:200,p:18,c:14,f:8,cat:'Protein'},
+
+ /* ---- more breakfast / tiffin ---- */
+ {n:'Dhokla',u:'3 pcs',kc:180,p:6,c:28,f:5,cat:'Breakfast'},
+ {n:'Appe / paniyaram',u:'6 pcs',kc:220,p:6,c:36,f:6,cat:'Breakfast'},
+ {n:'Plain / masala omelette + bread',u:'1 set',kc:320,p:16,c:28,f:16,cat:'Breakfast'},
+ {n:'Veg sandwich',u:'1',kc:220,p:6,c:34,f:7,cat:'Breakfast'},
+ {n:'Grilled cheese sandwich',u:'1',kc:330,p:11,c:36,f:16,cat:'Breakfast'},
+ {n:'Cornflakes + milk',u:'1 bowl',kc:220,p:8,c:38,f:4,cat:'Breakfast'},
+ {n:'Muesli + curd',u:'1 bowl',kc:260,p:10,c:40,f:7,cat:'Breakfast'},
+ {n:'Sabudana thalipeeth',u:'1',kc:250,p:4,c:34,f:11,cat:'Breakfast'},
+
+ /* ---- more snacks / street food ---- */
+ {n:'Samosa',u:'1',kc:260,p:5,c:30,f:13,cat:'Snacks'},
+ {n:'Kachori',u:'1',kc:250,p:5,c:28,f:13,cat:'Snacks'},
+ {n:'Onion / mirchi bhaji',u:'6 pcs',kc:300,p:6,c:28,f:18,cat:'Snacks'},
+ {n:'Pani puri',u:'6 pcs',kc:180,p:4,c:34,f:4,cat:'Snacks'},
+ {n:'Ragda pattice',u:'1 plate',kc:350,p:9,c:50,f:13,cat:'Snacks'},
+ {n:'Frankie / veg roll',u:'1',kc:300,p:8,c:42,f:11,cat:'Snacks'},
+ {n:'Sev / farsan',u:'30 g',kc:160,p:4,c:14,f:10,cat:'Snacks'},
+ {n:'Khakhra',u:'2 pcs',kc:120,p:3,c:20,f:3,cat:'Snacks'},
+ {n:'Veg cutlet',u:'2 pcs',kc:220,p:5,c:26,f:11,cat:'Snacks'},
+ {n:'French fries',u:'1 small',kc:320,p:4,c:42,f:16,cat:'Snacks'},
+ {n:'Pizza (slice)',u:'1 slice',kc:280,p:11,c:34,f:11,cat:'Snacks'},
+ {n:'Veg burger',u:'1',kc:350,p:10,c:48,f:14,cat:'Snacks'},
+ {n:'Maggi noodles',u:'1 plate',kc:350,p:8,c:52,f:12,cat:'Snacks'},
+ {n:'Veg momos',u:'6 pcs',kc:220,p:7,c:38,f:5,cat:'Snacks'},
+
+ /* ---- more sweets ---- */
+ {n:'Jalebi',u:'2 pcs',kc:300,p:2,c:52,f:10,cat:'Sweets'},
+ {n:'Rice kheer',u:'1 katori',kc:250,p:6,c:38,f:8,cat:'Sweets'},
+ {n:'Karanji',u:'2 pcs',kc:280,p:4,c:34,f:14,cat:'Sweets'},
+ {n:'Pedha',u:'2 pcs',kc:200,p:4,c:26,f:9,cat:'Sweets'},
+ {n:'Kaju katli',u:'3 pcs',kc:230,p:5,c:24,f:13,cat:'Sweets'},
+ {n:'Ice cream',u:'1 scoop',kc:200,p:4,c:24,f:10,cat:'Sweets'},
+
+ /* ---- dairy extras ---- */
+ {n:'Cheese slice',u:'1 slice',kc:70,p:4,c:1,f:6,cat:'Dairy'},
+ {n:'Butter',u:'1 tsp 5g',kc:36,p:0,c:0,f:4,cat:'Dairy'},
+ {n:'Cold coffee / milkshake',u:'1 glass',kc:250,p:7,c:34,f:9,cat:'Dairy'},
+
+ /* ---- more fruit ---- */
+ {n:'Watermelon (kalingad)',u:'1 bowl',kc:90,p:2,c:22,f:0.5,cat:'Fruit'},
+ {n:'Muskmelon (kharbuj)',u:'1 bowl',kc:80,p:2,c:19,f:0.5,cat:'Fruit'},
+ {n:'Grapes',u:'1 bowl',kc:110,p:1,c:28,f:0.3,cat:'Fruit'},
+ {n:'Custard apple (sitaphal)',u:'1 medium',kc:150,p:3,c:36,f:0.6,cat:'Fruit'},
+ {n:'Jamun',u:'1 bowl',kc:80,p:1,c:20,f:0.3,cat:'Fruit'},
+ {n:'Pineapple',u:'1 bowl',kc:90,p:1,c:22,f:0.2,cat:'Fruit'},
+ {n:'Watery coconut (fresh)',u:'1/2 medium',kc:150,p:1.5,c:7,f:14,cat:'Fruit'},
+
+ /* ---- dry fruits & nuts ---- */
+ {n:'Cashew (kaju)',u:'10 g (7 nuts)',kc:57,p:2,c:3,f:4.5,cat:'Seeds'},
+ {n:'Pistachio',u:'10 g',kc:56,p:2,c:3,f:4.5,cat:'Seeds'},
+ {n:'Raisins (kishmish)',u:'15 g',kc:45,p:0.5,c:12,f:0,cat:'Seeds'},
+ {n:'Dates (khajur)',u:'2 pcs',kc:110,p:1,c:28,f:0.2,cat:'Seeds'},
+ {n:'Anjeer (fig, dry)',u:'2 pcs',kc:90,p:1,c:20,f:0.4,cat:'Seeds'},
+
+ /* ---- drinks & staples ---- */
+ {n:'Black coffee / green tea',u:'1 cup',kc:5,p:0,c:1,f:0,cat:'Other'},
+ {n:'Nimbu pani (sweet)',u:'1 glass',kc:80,p:0,c:20,f:0,cat:'Other'},
+ {n:'Coconut water',u:'1 glass',kc:60,p:1,c:13,f:0,cat:'Other'},
+ {n:'Sugarcane juice',u:'1 glass',kc:180,p:0,c:45,f:0,cat:'Other'},
+ {n:'Cola / soft drink',u:'1 can',kc:140,p:0,c:35,f:0,cat:'Other'},
+ {n:'Fruit juice (packed)',u:'1 glass',kc:130,p:0.5,c:32,f:0,cat:'Other'},
+ {n:'Sugar',u:'1 tsp',kc:20,p:0,c:5,f:0,cat:'Other'},
+ {n:'Jaggery (gul)',u:'1 tbsp',kc:60,p:0,c:15,f:0,cat:'Other'},
+ {n:'Honey',u:'1 tbsp',kc:64,p:0,c:17,f:0,cat:'Other'},
+ {n:'Shengdana (peanut) chutney',u:'1 tbsp',kc:60,p:2.5,c:3,f:4,cat:'Other'},
+ {n:'Coconut chutney',u:'1 tbsp',kc:50,p:1,c:2,f:4.5,cat:'Other'},
 ];
 const CATEMOJI={Grains:'🌾',Dals:'🫘',Dairy:'🥛',Protein:'🍗',Veg:'🥬',Fruit:'🍎',Seeds:'🌰',
  Breakfast:'🍳',Snacks:'🥟',Sweets:'🍬',Other:'🍵'};
+
+/* ---------- Micronutrients: reference targets (adult, NIH/ICMR-aligned) ---------- */
+const NUTRIENTS=[
+ {k:'va', n:'Vitamin A',    u:'µg', rda:900,  g:'Vitamins',     src:'Palak, methi, drumstick, carrot, egg'},
+ {k:'vc', n:'Vitamin C',    u:'mg', rda:90,   g:'Vitamins',     src:'Amla, guava, lemon, citrus, veg'},
+ {k:'vd', n:'Vitamin D',    u:'µg', rda:15,   g:'Vitamins',     src:'Fatty fish, egg, fortified milk; sun'},
+ {k:'ve', n:'Vitamin E',    u:'mg', rda:15,   g:'Vitamins',     src:'Sunflower seeds, almond, peanut'},
+ {k:'vk', n:'Vitamin K',    u:'µg', rda:120,  g:'Vitamins',     src:'Palak, methi, shepu, leafy greens'},
+ {k:'fol',n:'Folate (B9)',  u:'µg', rda:400,  g:'Vitamins',     src:'Dal, sprouts, greens, citrus'},
+ {k:'b12',n:'Vitamin B12',  u:'µg', rda:2.4,  g:'Vitamins',     src:'Fish, meat, egg, dairy'},
+ {k:'fe', n:'Iron',         u:'mg', rda:8,    g:'Minerals',     src:'Dal, beans, spinach, seeds, meat'},
+ {k:'ca', n:'Calcium',      u:'mg', rda:1000, g:'Minerals',     src:'Curd, milk, paneer, sesame, ragi'},
+ {k:'mg', n:'Magnesium',    u:'mg', rda:420,  g:'Minerals',     src:'Pumpkin seeds, dal, jowar, greens'},
+ {k:'zn', n:'Zinc',         u:'mg', rda:11,   g:'Minerals',     src:'Meat, egg, legumes, pumpkin seeds'},
+ {k:'k',  n:'Potassium',    u:'mg', rda:3400, g:'Minerals',     src:'Fruit, veg, dal, potato, curd'},
+ {k:'se', n:'Selenium',     u:'µg', rda:55,   g:'Minerals',     src:'Fish, egg, meat, dairy'},
+ {k:'io', n:'Iodine',       u:'µg', rda:150,  g:'Minerals',     src:'Iodized salt, seafood, dairy'},
+ {k:'o3', n:'Omega-3 (ALA)',u:'g',  rda:1.6,  g:'Fats & fiber', src:'Flax, chia, walnuts; fish = EPA/DHA'},
+ {k:'fib',n:'Fiber',        u:'g',  rda:32,   g:'Fats & fiber', src:'Jowar, dal, veg, fruit, seeds'},
+];
+
+/* Per-serving micronutrient estimates keyed by food name (serving = the food's `u`).
+   Estimates from each dish's main ingredients — coverage guide, not lab-exact. */
+const MICRO={
+ 'Jowar bhakri':{fib:3,fe:2,mg:40,k:120},
+ 'Bajra bhakri':{fib:3,fe:2.2,mg:60,k:130},
+ 'Nachni (ragi) bhakri':{ca:130,fib:3,fe:2,mg:40},
+ 'Chapati / poli':{fib:2,fe:1,mg:25},
+ 'Ghadichi poli (with ghee)':{fib:2,fe:1,mg:25,va:20},
+ 'Cooked rice':{fib:0.6,mg:15,se:10},
+ 'Varan-bhaat (dal rice)':{fib:5,fe:2.2,fol:90,k:300,mg:40},
+ 'Khichdi (moong dal)':{fib:6,fe:2.5,fol:90,mg:45,k:300,zn:1.5},
+ 'Dal khichdi':{fib:6,fe:2.8,fol:100,mg:50,k:300,zn:1.5},
+ 'Curd rice (dahi bhaat)':{ca:150,b12:0.4,fib:1,k:180},
+ 'Varan / toor dal':{fib:5,fe:2,fol:90,k:300,mg:40,zn:1.2},
+ 'Amti (Maharashtrian dal)':{fib:5,fe:2,fol:90,k:320,mg:40},
+ 'Katachi amti':{fib:5,fe:2.2,fol:100,k:320},
+ 'Moong sprouts usal':{fib:4,vc:12,fol:100,fe:2,k:250,mg:40},
+ 'Matki (moth) usal':{fib:5,fe:3,fol:120,mg:50,zn:1.8,k:280},
+ 'Chana (chickpea) usal':{fib:6,fe:2.5,fol:140,mg:45,zn:1.5,k:290},
+ 'Vatana (dried peas) usal':{fib:6,fe:2.3,fol:120,k:280,mg:40},
+ 'Chavli (cowpea) usal':{fib:6,fe:2.6,fol:130,k:290,mg:45},
+ 'Kala vatana usal (Malvani)':{fib:6,fe:2.8,fol:130,k:300,mg:48},
+ 'Rajma masala':{fib:6,fe:3,fol:130,k:350,mg:50,zn:1.5},
+ 'Kabuli chana / chole':{fib:7,fe:2.8,fol:170,mg:48,zn:1.6,k:290},
+ 'Masoor dal':{fib:5,fe:3,fol:180,k:300,mg:36},
+ 'Pithla (besan)':{fib:4,fe:2,fol:80,mg:40},
+ 'Palak bhaji':{va:470,vk:300,vc:14,fol:120,fe:2.5,ca:100,mg:60,k:350,fib:3},
+ 'Methi bhaji':{va:320,vk:250,vc:12,fol:80,fe:3,ca:120,fib:3,k:250},
+ 'Shepu (dill) bhaji':{va:300,vk:250,vc:10,ca:100,fe:2.5,fib:3},
+ 'Bhendi (okra) bhaji':{fol:60,vc:13,vk:40,ca:60,mg:40,fib:3},
+ 'Vangyache bharit (baingan)':{fib:4,k:230,fol:20},
+ 'Bharli vangi (stuffed)':{fib:5,k:250,mg:30,fol:25},
+ 'Batatyachi bhaji (potato)':{k:420,vc:12,fib:3,mg:25},
+ 'Gavar / cluster beans':{fib:4,vc:12,fol:40,k:250},
+ 'Dudhi (bottle gourd) bhaji':{k:150,vc:8,fib:2},
+ 'Kobi (cabbage) bhaji':{vc:30,vk:70,fol:40,fib:3},
+ 'Flower (cauliflower) bhaji':{vc:40,vk:15,fol:55,fib:3,k:200},
+ 'Shevga (drumstick) bhaji':{vc:51,va:100,ca:40,k:250,fib:3,fol:40},
+ 'Mixed veg sabji':{va:120,vc:20,vk:30,fol:35,fib:3,k:250},
+ 'Kachumber salad':{vc:15,k:200,va:40,fib:2},
+ 'Koshimbir (cucumber+curd)':{ca:90,k:150,vc:5,fib:1,b12:0.3},
+ 'Boiled egg':{b12:0.6,vd:1,se:15,zn:0.6,va:80},
+ 'Egg bhurji':{b12:1.2,vd:2,se:30,zn:1.2,va:160},
+ 'Egg curry (anda rassa)':{b12:1.2,vd:2,se:30,va:160,k:200},
+ 'Chicken curry (home, lean)':{b12:0.5,se:22,zn:1.8,k:300,fe:1},
+ 'Chicken Kolhapuri (tambda/pandhra)':{b12:0.5,se:22,zn:2,k:250,fe:1.5},
+ 'Chicken sukka':{b12:0.5,se:24,zn:2.2,fe:1.5},
+ 'Tandoori / grilled chicken':{b12:0.6,se:30,zn:2.2,k:320},
+ 'Mutton curry (lean)':{b12:2.5,fe:2.5,zn:4,se:12,k:250},
+ 'Mutton Kolhapuri rassa':{b12:2.5,fe:2.8,zn:4.5,se:12},
+ 'Kheema (mutton mince)':{b12:2.4,fe:2.6,zn:4,se:12},
+ 'Fish curry (Malvani)':{b12:2,vd:4,se:40,o3:0.3,io:30,k:250},
+ 'Fried fish (bangda/surmai)':{b12:2,vd:4,se:40,io:30,o3:0.5},
+ 'Grilled fish':{b12:2.4,vd:5,se:45,io:35,o3:0.4},
+ 'Prawns (kolambi) masala':{b12:1.5,se:30,io:40,zn:1.5},
+ 'Bombil (Bombay duck) fry':{b12:1,vd:3,se:30,io:40},
+ 'Paneer bhurji':{ca:180,b12:0.6,va:100,zn:1},
+ 'Paneer':{ca:200,b12:0.7,zn:1.2},
+ 'Tofu':{ca:200,fe:2.7,mg:40,zn:1.5},
+ 'Tofu bhurji':{ca:180,fe:2.5,mg:38,va:80},
+ 'Curd (dahi)':{ca:300,b12:0.7,k:240,io:30},
+ 'Taak (buttermilk)':{ca:120,k:150,io:15,b12:0.3},
+ 'Milk (toned)':{ca:240,vd:1,b12:0.9,k:300,io:30},
+ 'Lassi (sweet)':{ca:250,b12:0.7,k:200},
+ 'Tup (ghee)':{va:15,vd:0.1},
+ 'Kande pohe':{fe:2.5,fib:2,k:150},
+ 'Dadpe / batata pohe':{fe:2.5,fib:2,k:200},
+ 'Upma (sanja)':{fib:2,mg:20,fol:20},
+ 'Sabudana khichdi':{k:100,fib:1},
+ 'Thalipeeth (bhajni)':{fib:4,fe:2,mg:50,fol:40},
+ 'Idli':{fol:30,fib:2},
+ 'Medu vada':{fol:40,fib:3,fe:2},
+ 'Masala dosa':{fol:35,fib:3,k:250},
+ 'Uttapam':{fol:30,fib:2,vc:6},
+ 'Sheera (rava)':{ca:40,va:20},
+ 'Moong dal chilla':{fib:4,fol:80,fe:2,mg:30},
+ 'Misal pav':{fib:6,fe:3,fol:120,k:300,mg:45},
+ 'Vada pav':{fib:3,k:250,fe:1.5},
+ 'Bhel puri':{fib:3,vc:8,k:200,fe:1.5},
+ 'Pav bhaji':{vc:30,va:120,k:400,fib:5,fe:2},
+ 'Kothimbir vadi':{fib:3,fe:2,fol:40,va:60},
+ 'Alu vadi (patra)':{fib:3,va:200,fe:2,ca:60},
+ 'Shengdana (peanut) laddu-chikki':{ve:1.5,mg:30,fol:25},
+ 'Puran poli':{fib:3,fe:2,fol:60,mg:30},
+ 'Ukadiche modak':{fib:2,mg:20},
+ 'Shrikhand':{ca:200,b12:0.6},
+ 'Basundi':{ca:220,b12:0.6,vd:0.5},
+ 'Rava / besan laddu':{fol:30,mg:20,ve:0.8},
+ 'Gajar halwa':{va:400,ca:120,vc:3},
+ 'Aamras':{vc:40,va:90,k:280,fib:3},
+ 'Guava':{vc:200,fib:5,fol:40,k:300,va:30},
+ 'Apple':{vc:5,fib:4,k:150},
+ 'Banana':{k:420,vc:10,fib:3,mg:30,fol:24},
+ 'Papaya':{vc:90,va:90,fol:40,k:260,fib:3},
+ 'Mango (aamba)':{vc:40,va:90,fib:3,k:280,fol:60},
+ 'Chikoo (sapota)':{vc:15,fib:5,k:190},
+ 'Pomegranate (dalimb)':{vc:15,k:240,fib:4,vk:20,fol:40},
+ 'Dragon fruit':{vc:9,fib:3,k:200,mg:40},
+ 'Orange / mosambi':{vc:60,fol:40,k:230,fib:3},
+ 'Amla':{vc:60,fib:1},
+ 'Pumpkin seeds':{mg:55,zn:0.75,fe:0.9,k:80},
+ 'Sunflower seeds':{ve:3.5,mg:32,se:5,fib:0.8},
+ 'Sesame (til)':{ca:100,fe:1.5,mg:35,zn:0.7},
+ 'Flax + chia':{o3:2.9,fib:5,mg:40,ca:60},
+ 'Walnuts':{o3:0.9,ve:0.2,mg:16,fib:0.7},
+ 'Almonds':{ve:2.6,mg:27,ca:26,fib:1.2},
+ 'Shengdana (peanuts)':{ve:1.7,mg:34,fol:30,fib:1.7,fe:0.9},
+ 'Sol kadhi':{k:120,vc:3},
+ 'Kokum sharbat':{vc:5,k:60},
+ 'Papad (roasted)':{fol:15,fe:0.6},
+ 'Oats (cooked)':{fib:4,mg:40,fe:2,zn:1},
+ 'Dalia (broken wheat)':{fib:5,mg:40,fe:2},
+ 'Veg pulao':{fib:3,va:80,vc:8,k:200},
+ 'Veg biryani':{fib:4,va:100,vc:10,k:250,fol:40},
+ 'Chicken biryani':{b12:0.4,se:20,zn:1.8,k:280},
+ 'Kulith (horsegram) usal':{fib:5,fe:4,fol:120,mg:50,zn:1.8,k:290},
+ 'Val / birdyachi usal':{fib:6,fe:3,fol:130,mg:50,k:300},
+ 'Chana dal':{fib:5,fe:2.5,fol:120,mg:40,zn:1.3},
+ 'Dal fry / tadka':{fib:5,fe:2.2,fol:100,k:300,mg:40},
+ 'Sambar':{fib:4,fe:2,fol:90,vc:8,k:280,mg:35},
+ 'Kadhi (besan)':{ca:120,fib:2,fol:40,b12:0.3},
+ 'Dal makhani':{fib:6,fe:3,fol:120,ca:80,mg:45,k:300},
+ 'Soya chunks curry':{fe:3,fol:60,ca:80,mg:40,zn:1.5,k:300,fib:4},
+ 'Palak paneer':{va:400,vk:260,vc:12,fol:100,fe:2.5,ca:220,mg:50,fib:3},
+ 'Paneer butter masala':{ca:200,b12:0.6,va:120,fib:2},
+ 'Beetroot sabji':{fol:80,k:250,fib:3,vc:4},
+ 'Carrot-peas (gajar-matar)':{va:500,vc:8,fib:4,fol:40,k:200},
+ 'Matar (green peas)':{fib:5,fol:50,vc:12,k:200,fe:1.5},
+ 'Bhopla (pumpkin) bhaji':{va:400,vc:9,k:250,fib:2},
+ 'Capsicum sabji':{vc:80,va:120,fol:30,fib:2},
+ 'Mushroom masala':{vd:0.4,se:12,k:300,fol:20,fib:2},
+ 'Sweet corn (makai)':{fib:4,fol:40,mg:30,k:220,vc:6},
+ 'Omelette (2 eggs)':{b12:1.2,vd:2,se:30,zn:1.2,va:160},
+ 'Pomfret / surmai fry':{b12:2,vd:4,se:40,io:35,o3:0.4},
+ 'Crab masala':{b12:6,zn:4,se:35,io:40},
+ 'Tisrya (clams) masala':{b12:20,fe:12,se:30,io:40},
+ 'Chicken tikka':{b12:0.6,se:30,zn:2.2,k:320},
+ 'Dhokla':{fol:40,fib:2,fe:1.5},
+ 'Cheese slice':{ca:120,b12:0.3},
+ 'Cold coffee / milkshake':{ca:200,b12:0.6},
+ 'Watermelon (kalingad)':{vc:12,va:50,k:170,fib:1},
+ 'Muskmelon (kharbuj)':{vc:36,va:170,k:260,fib:1},
+ 'Grapes':{vc:6,vk:18,k:200,fib:1},
+ 'Custard apple (sitaphal)':{vc:36,fib:6,k:380,mg:30},
+ 'Jamun':{vc:14,fe:1,k:80,fib:1},
+ 'Pineapple':{vc:47,fol:30,k:180,fib:2},
+ 'Watery coconut (fresh)':{mg:32,k:180,fe:2,fib:4},
+ 'Coconut water':{k:250,mg:25,vc:5},
+ 'Cashew (kaju)':{mg:29,fe:0.7,zn:0.6},
+ 'Pistachio':{ve:0.3,mg:12,k:100,fib:1},
+ 'Raisins (kishmish)':{k:110,fe:0.4,fib:0.6},
+ 'Dates (khajur)':{k:130,fib:2,mg:15},
+ 'Anjeer (fig, dry)':{ca:50,k:120,fib:2.5,mg:15},
+ 'Sugarcane juice':{k:150,fe:1},
+ 'Nimbu pani (sweet)':{vc:12,k:50},
+ 'Shengdana (peanut) chutney':{ve:1,mg:20,fol:15},
+};
 
 /* ---------- weekly Maharashtrian plan (from user's PDF) ---------- */
 const PLAN={
@@ -730,6 +1039,17 @@ function renderDash(){
    <div class="progress-line" style="background:var(--ring-track);margin-top:8px">
      <i style="width:${habitsDone/HABITS.length*100}%;background:var(--good)"></i></div>
    <button class="btn ghost sm" style="margin-top:12px" onclick="go('log')">Open today's log →</button>
+ </div>`;
+
+ // micronutrient summary
+ const micNow=dayMicros(d), micCov=microCovered(micNow,t);
+ h+=`<div class="card" style="margin-top:14px">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+     <h3 style="font-size:16px">Vitamins & minerals</h3>
+     <span class="pill ${micCov>=11?'good':micCov>=7?'warn':'bad'}">${micCov}/${NUTRIENTS.length} on track</span></div>
+   <div class="progress-line" style="background:var(--ring-track);margin-top:8px">
+     <i style="width:${micCov/NUTRIENTS.length*100}%;background:var(--primary)"></i></div>
+   <button class="btn ghost sm" style="margin-top:12px" onclick="go('nutri')">See all nutrients →</button>
  </div>`;
 
  $('#pane-dash').innerHTML=h;
@@ -918,6 +1238,53 @@ function addFoodEntry(o){
  const d=dayLog(P().id,logDate);
  d.foods.push(Object.assign({id:'f'+Math.random().toString(36).slice(2,9),slot:addSlot},o));
  delete d.sample;save();closeModal();renderLog();toast(o.n+' added');
+}
+
+/* ---------- NUTRIENTS (micronutrients) ---------- */
+function dayMicros(d){
+ const tot={};NUTRIENTS.forEach(n=>tot[n.k]=0);
+ (d.foods||[]).forEach(f=>{const m=MICRO[f.n];if(!m)return;const q=f.qty||1;
+   for(const k in m)if(k in tot)tot[k]+=m[k]*q;});
+ return tot;
+}
+function microRda(n,t){return n.k==='fib'?(t.fiber||32):n.rda;}
+function microCovered(mic,t){return NUTRIENTS.filter(n=>mic[n.k]/microRda(n,t)>=0.7).length;}
+function fmtMicro(v){return v>=100?Math.round(v):v>=10?Math.round(v):round(v,1);}
+function renderNutrients(){
+ const p=P(),t=activeTargets(p),d=today();
+ const mic=dayMicros(d);
+ const covered=microCovered(mic,t);
+ const strong=NUTRIENTS.filter(n=>mic[n.k]/microRda(n,t)>=1).length;
+ const unrec=(d.foods||[]).filter(f=>!MICRO[f.n]).length;
+
+ let h=`<div class="section-title" style="margin-top:14px">Micronutrients today<span class="line"></span>
+   <span class="pill ${covered>=11?'good':covered>=7?'warn':'bad'}">${covered}/${NUTRIENTS.length} on track</span></div>`;
+ h+=`<div class="card"><div style="display:flex;gap:15px;align-items:center">
+   <div class="ring-wrap" style="width:78px;height:78px;flex:none">${ringSVG(covered/NUTRIENTS.length,'var(--primary)',78)}
+     <div class="ring-center"><b class="tnum" style="font-size:18px">${covered}</b><small>/${NUTRIENTS.length}</small></div></div>
+   <div><div style="font-family:var(--display);font-weight:800;font-size:17px">${strong} fully met · ${covered} on track</div>
+   <div class="faint" style="font-size:13px;font-weight:600;margin-top:2px">Estimated from today's logged foods, vs daily targets. Aim to cover most across the week.</div></div></div>`;
+
+ ['Vitamins','Minerals','Fats & fiber'].forEach(g=>{
+   h+=`<div class="section-title">${g}<span class="line"></span></div><div class="card">`;
+   NUTRIENTS.filter(n=>n.g===g).forEach(n=>{
+     const have=mic[n.k],need=microRda(n,t),r=need?have/need:0;
+     const col=r>=0.7?'var(--good)':r>=0.4?'var(--warn)':'var(--bad)';
+     h+=`<div class="nutri-row"><div class="nutri-top"><b>${n.n}</b>
+        <span class="tnum">${fmtMicro(have)} / ${fmtMicro(need)} ${n.u} · ${Math.round(r*100)}%</span></div>
+       <div class="nbar"><i style="width:${clamp(r*100,0,100)}%;background:${col}"></i></div>
+       <div class="nutri-src faint">Best from: ${n.src}</div></div>`;
+   });
+   h+=`</div>`;
+ });
+ if(unrec)h+=`<div class="disclaimer">${unrec} logged item${unrec>1?'s':''} (custom or planned meals) have no micronutrient estimate yet, so they're not counted above — log them from the food search to include their nutrients.</div>`;
+ h+=`<div class="disclaimer">🔬 Micronutrient amounts are practical per-serving estimates from each dish's main ingredients — for coverage awareness, not lab-exact values. A varied weekly diet is the goal, not hitting every number every day. Deficiencies (e.g. vitamin&nbsp;D, B12) need a clinician.</div>`;
+ $('#pane-nutri').innerHTML=h;
+ requestAnimationFrame(()=>{
+   if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+   document.querySelectorAll('#pane-nutri .nbar i').forEach(i=>{const w=i.style.width;i.style.width='0';
+     requestAnimationFrame(()=>requestAnimationFrame(()=>{i.style.transition='width .8s cubic-bezier(.2,.8,.2,1)';i.style.width=w;}));});
+ });
 }
 
 /* ---------- PROGRESS ---------- */
@@ -1215,6 +1582,7 @@ function go(tab){
  document.querySelectorAll('.tab-pane').forEach(pane=>pane.classList.remove('active'));
  $('#pane-'+tab).classList.add('active');
  if(tab==='dash')renderDash();else if(tab==='log')renderLog();else if(tab==='progress')renderProgress();
+ else if(tab==='nutri')renderNutrients();
  else if(tab==='plan')renderPlan();else if(tab==='profile')renderProfile();
  window.scrollTo(0,0);
 }
