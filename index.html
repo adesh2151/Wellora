@@ -404,6 +404,17 @@ a.link{color:var(--primary);font-weight:700;text-decoration:none}
 .upd-banner button{background:#fff;color:var(--primary);border-radius:9px;padding:8px 15px;font-weight:800;font-size:13px;white-space:nowrap}
 .upd-banner button:active{transform:scale(.96)}
 
+/* ---- coach chat ---- */
+.coach-msgs{display:flex;flex-direction:column;gap:8px;max-height:44vh;overflow-y:auto;padding:4px 2px 6px}
+.cbub{max-width:84%;padding:9px 13px;border-radius:15px;font-size:13.5px;line-height:1.5;word-wrap:break-word}
+.cbub.bot{align-self:flex-start;background:var(--surface-2);border-bottom-left-radius:5px}
+.cbub.user{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:5px}
+.coach-chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 2px}
+.coach-chip{padding:7px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:700;color:var(--primary)}
+.coach-chip:active{transform:scale(.96)}
+.coach-input{display:flex;gap:8px;margin-top:10px}
+.coach-input input{flex:1}
+
 @media (prefers-reduced-motion:reduce){
   .tab-pane.active .card,.tab-pane.active .rings>*{animation:none}
   .ring-wrap svg circle:last-of-type{transition:none}
@@ -803,9 +814,35 @@ const FOODS=[
  {n:'Bell pepper (raw)',u:'1 medium',kc:30,p:1,c:6,f:0.3,cat:'Veg'},
  {n:'Mushroom (raw)',u:'1 cup',kc:22,p:3,c:3,f:0.3,cat:'Veg'},
  {n:'Boiled green peas',u:'1 katori',kc:120,p:8,c:20,f:0.4,cat:'Veg'},
+
+ /* ---- supplements ---- */
+ {n:'Whey protein (1 scoop)',u:'~30 g',kc:120,p:24,c:3,f:1.5,cat:'Supplements'},
+ {n:'Whey shake (in milk)',u:'1 glass',kc:240,p:32,c:14,f:7,cat:'Supplements'},
+ {n:'Plant / pea protein (scoop)',u:'~30 g',kc:110,p:22,c:4,f:2,cat:'Supplements'},
+ {n:'Casein protein (scoop)',u:'~30 g',kc:120,p:24,c:3,f:1,cat:'Supplements'},
+ {n:'Mass gainer (scoop)',u:'~60 g',kc:350,p:20,c:60,f:4,cat:'Supplements'},
+ {n:'Protein bar',u:'1 bar',kc:200,p:20,c:20,f:7,cat:'Supplements'},
+ {n:'BCAA / EAA',u:'1 serving',kc:20,p:0,c:4,f:0,cat:'Supplements'},
+ {n:'Creatine',u:'5 g',kc:0,p:0,c:0,f:0,cat:'Supplements'},
+ {n:'Multivitamin tablet',u:'1 tablet',kc:0,p:0,c:0,f:0,cat:'Supplements'},
+ {n:'Vitamin D tablet',u:'1 tablet',kc:0,p:0,c:0,f:0,cat:'Supplements'},
+ {n:'Vitamin B12 tablet',u:'1 tablet',kc:0,p:0,c:0,f:0,cat:'Supplements'},
+ {n:'Calcium tablet',u:'1 tablet',kc:0,p:0,c:0,f:0,cat:'Supplements'},
+ {n:'Iron tablet',u:'1 tablet',kc:0,p:0,c:0,f:0,cat:'Supplements'},
+ {n:'Omega-3 fish oil capsule',u:'1 capsule',kc:10,p:0,c:0,f:1,cat:'Supplements'},
+
+ /* ---- more Indian dishes ---- */
+ {n:'Aloo gobi',u:'1 katori',kc:150,p:4,c:16,f:8,cat:'Veg'},
+ {n:'Jeera aloo',u:'1 katori',kc:160,p:3,c:22,f:7,cat:'Veg'},
+ {n:'Chole bhature',u:'1 plate',kc:520,p:14,c:64,f:22,cat:'Snacks'},
+ {n:'Rajma chawal',u:'1 plate',kc:420,p:14,c:68,f:9,cat:'Grains'},
+ {n:'Paneer tikka',u:'6 pcs',kc:280,p:16,c:8,f:20,cat:'Protein'},
+ {n:'Chicken 65',u:'1 plate',kc:320,p:26,c:12,f:18,cat:'Protein'},
+ {n:'Mutton biryani',u:'1 plate',kc:520,p:24,c:60,f:20,cat:'Grains'},
+ {n:'Prawn fry',u:'1 plate',kc:230,p:24,c:6,f:12,cat:'Protein'},
 ];
 const CATEMOJI={Grains:'🌾',Dals:'🫘',Dairy:'🥛',Protein:'🍗',Veg:'🥬',Fruit:'🍎',Seeds:'🌰',
- Breakfast:'🍳',Snacks:'🥟',Sweets:'🍬',Other:'🍵'};
+ Breakfast:'🍳',Snacks:'🥟',Sweets:'🍬',Supplements:'💊',Other:'🍵'};
 
 /* ---------- Micronutrients: reference targets (adult, NIH/ICMR-aligned) ---------- */
 const NUTRIENTS=[
@@ -983,6 +1020,22 @@ const MICRO={
  'Sugarcane juice':{k:150,fe:1},
  'Nimbu pani (sweet)':{vc:12,k:50},
  'Shengdana (peanut) chutney':{ve:1,mg:20,fol:15},
+ 'Whey protein (1 scoop)':{ca:120},
+ 'Whey shake (in milk)':{ca:340,vd:1,b12:0.9},
+ 'Multivitamin tablet':{va:150,vc:40,vd:10,ve:5,fe:5,zn:5,fol:100,b12:2,se:20,io:75,mg:30},
+ 'Vitamin D tablet':{vd:25},
+ 'Vitamin B12 tablet':{b12:100},
+ 'Calcium tablet':{ca:500},
+ 'Iron tablet':{fe:18},
+ 'Omega-3 fish oil capsule':{o3:0.3},
+ 'Aloo gobi':{vc:30,vk:20,k:300,fib:3},
+ 'Jeera aloo':{k:400,vc:10,fib:2},
+ 'Chole bhature':{fib:8,fe:3,fol:150,mg:50},
+ 'Rajma chawal':{fib:8,fe:3,fol:120,k:350,mg:50},
+ 'Paneer tikka':{ca:180,b12:0.6},
+ 'Chicken 65':{b12:0.5,se:24,zn:2},
+ 'Mutton biryani':{b12:2,fe:2.5,zn:3,se:15},
+ 'Prawn fry':{b12:1.5,se:30,io:40,zn:1.5},
  'Orange juice (fresh)':{vc:80,fol:40,k:450},
  'Mosambi juice':{vc:60,fol:35,k:400},
  'Pomegranate juice':{vc:10,k:530,vk:25},
@@ -1140,6 +1193,10 @@ function renderDash(){
  </div>`;
 
  // rings
+ h+=`<div class="card" style="margin-top:14px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openCoach()">
+     <div class="track-ic" style="background:var(--primary-soft);font-size:20px">💬</div>
+     <div style="flex:1"><div class="tl">Ask your coach</div><div class="ts">Personalized tips from your own data</div></div>
+     <svg viewBox="0 0 24 24" fill="none" style="width:20px;height:20px;color:var(--ink-faint)"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
  h+=`<div class="section-title">Today &nbsp;·&nbsp; ${DOWFULL[now.getDay()]}, ${now.getDate()} ${MON[now.getMonth()]}<span class="line"></span></div>`;
  h+=`<div class="rings">
    ${ringCard('Calories',Math.max(0,remain),remain>=0?'left':'over',netCal/t.cal,'var(--accent)',tot.kc+' / '+t.cal+' kcal')}
@@ -1478,6 +1535,10 @@ const SCAN_MAP={
  'guacamole':'Kachumber salad','burrito':'Frankie / veg roll','spaghetti':'Maggi noodles','carbonara':'Maggi noodles',
  'french loaf':'Bread (2 slices)','meat loaf':'Chicken keema','dough':'Chapati / poli','trifle':'Shrikhand',
  'consomme':'Chicken soup','hotpot':'Dal makhani','plate':null,'soup bowl':'Varan / toor dal','mixing bowl':null,
+ 'strawberry':'Guava','head cabbage':'Kobi (cabbage) bhaji','butternut squash':'Bhopla (pumpkin) bhaji',
+ 'acorn squash':'Bhopla (pumpkin) bhaji','spaghetti squash':'Dudhi (bottle gourd) bhaji','eggnog':'Lassi (sweet)',
+ 'coffee':'Black coffee / green tea','custard':'Basundi','waffle':'Bread (2 slices)','potpie':'Veg cutlet',
+ 'chocolate':'Ice cream','red wine':null,'cardoon':null,'artichoke':null,
 };
 function matchFoodIdx(label){
  label=(label||'').toLowerCase();
@@ -1919,6 +1980,88 @@ function confirmPlanMeal(){
 }
 
 /* ---------- PROFILE ---------- */
+/* ---------- coach (data-driven, on-device) ---------- */
+const COACH_BASE=['What should I eat now?','Am I on track today?','What am I missing?','Give me a tip'];
+function coachChips(){const p=P();const c=[...COACH_BASE];if(p.goal==='lose')c.splice(2,0,'Why am I not losing weight?');else if(p.goal==='gain')c.splice(2,0,'How do I gain healthily?');return c;}
+function coachGreeting(){const p=P();const hr=new Date().getHours();const g=hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';return `${g}, ${p.name}! I'm your Wellora coach. Ask me anything, or tap a suggestion below.`;}
+function openCoach(){
+ let h=`<div class="modal-head"><h3>💬 Your coach</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+   <div class="coach-msgs" id="coachMsgs"></div>
+   <div class="coach-chips">${coachChips().map(c=>`<button class="coach-chip" onclick="coachAsk(this.textContent)">${c}</button>`).join('')}</div>
+   <div class="coach-input"><input class="input" id="coachIn" placeholder="Ask anything…" onkeydown="if(event.key==='Enter')coachSend()"><button class="btn sm" onclick="coachSend()">Send</button></div>
+   <div class="faint" style="font-size:10.5px;margin-top:8px">Tips are generated from your own data & general nutrition — not medical advice.</div>`;
+ openModal(h);coachSay('bot',coachGreeting());
+}
+function coachSay(role,text){const m=document.getElementById('coachMsgs');if(!m)return;const b=el('div','cbub '+role);b.innerHTML=esc(text).replace(/\n/g,'<br>');m.appendChild(b);m.scrollTop=m.scrollHeight;}
+function coachAsk(t){coachSay('user',t);const a=coachReply(t);setTimeout(()=>coachSay('bot',a),220);}
+function coachSend(){const el=document.getElementById('coachIn');if(!el)return;const t=el.value.trim();if(!t)return;el.value='';coachAsk(t);}
+function coachReply(q){
+ q=(q||'').toLowerCase().trim();
+ const p=P(),t=activeTargets(p),d=today(),tot=dayTotals(d);
+ const net=tot.kc-(d.exercise||0),kcalLeft=t.cal-net,pLeft=t.protein-tot.p,wLeft=(t.water||2500)-(d.water||0),sLeft=(t.steps||0)-(d.steps||0);
+ const hr=new Date().getHours(),has=(...w)=>w.some(x=>q.includes(x));
+ if(has('eat','hungry','what to eat','snack','cook','meal now')){
+   const slot=hr<11?'breakfast':hr<16?'lunch':hr<19?'a snack':'dinner';
+   const budget=Math.max(150,Math.round(kcalLeft>0?Math.min(kcalLeft,slot==='a snack'?250:550):300));
+   let s=`For ${slot}, aim for about ${budget} kcal`;
+   s+=pLeft>15?`, with protein (you're ${pLeft} g short today). `:`. `;
+   if(pLeft>15)s+='Good picks: '+(p.diet==='veg'?'paneer, dal, sprouts, curd or tofu':'eggs, chicken, fish, dal or paneer')+'. ';
+   if(p.condition==='diabetes'||p.condition==='pcos')s+='Keep it low-GI — jowar/bajra bhakri over rice, plenty of veg. ';
+   if(p.genPlan&&p.genPlan.meals){const day=DOWFULL[new Date().getDay()];const key=hr<11?'b':hr<16?'l':hr<19?'s':'d';const items=(p.genPlan.meals[day]||{})[key];if(items&&items.length)s+='Your plan suggests: '+items.map(x=>x.n).join(', ')+'.';}
+   return s;
+ }
+ if(has('on track','track','how am i doing','progress','summary')){
+   const parts=[kcalLeft>=0?`${kcalLeft} kcal left of ${t.cal}`:`${Math.abs(kcalLeft)} kcal over target`,
+     `protein ${tot.p}/${t.protein} g`,`water ${round((d.water||0)/1000,1)}/${round((t.water||2500)/1000,1)} L`,`steps ${fmtK(d.steps||0)}/${fmtK(t.steps||0)}`];
+   const good=kcalLeft>=-100&&pLeft<=20&&sLeft<=2000;
+   return (good?"You're on track today 👍":"Here's where today stands:")+'\n• '+parts.join('\n• ');
+ }
+ if(has('not losing','losing weight','stuck','plateau','why am i not','gain fat')){
+   const r=[];
+   if(net>t.cal)r.push("You're a little over your calorie target today — small extras (oil, sugar, snacks) add up fast.");
+   if((d.steps||0)<(t.steps||0)*0.7)r.push('Steps are below goal — daily movement matters as much as food.');
+   const L=logsFor(p.id),logged=Object.keys(L).filter(k=>dayTotals(L[k]).kc>0).length;
+   if(logged<3)r.push('Log a few days consistently — it is hard to judge without the full picture.');
+   r.push('Weight moves as a trend, not day-to-day — judge by your 7-day average and waist, not one reading.');
+   return 'A few common reasons:\n• '+r.slice(0,3).join('\n• ');
+ }
+ if(has('gain healthily','how do i gain','build muscle','gain weight')){
+   return 'To gain well:\n• Eat a small surplus with calorie-dense whole foods (nuts, seeds, dairy, measured ghee)\n• Prioritise protein (~'+t.protein+' g/day) across meals\n• Strength train 4×/week and progress the load\n• A protein-rich snack before bed helps';
+ }
+ if(has('missing','nutrient','vitamin','deficien','lacking')){
+   const mic=dayMicros(d),short=NUTRIENTS.filter(n=>mic[n.k]/microRda(n,t)<0.5).slice(0,4);
+   let s='';
+   if(pLeft>15)s+=`Protein: ${pLeft} g short. `;
+   if(wLeft>250)s+=`Water: ${Math.round(wLeft/250)} glasses to go. `;
+   if(short.length)s+='Low on '+short.map(n=>n.n).join(', ')+' — try '+short.map(n=>n.src.split(',')[0].toLowerCase()).join(', ')+'.';
+   return s||"You're covering your basics well today! 🎉";
+ }
+ if(has('tip','advice','motivat','help me'))return coachTip(p);
+ if(has('water'))return `Water: ${round((d.water||0)/1000,1)} L today. ${wLeft>250?'About '+Math.round(wLeft/250)+' glasses to go 💧':'Goal met — nice! 💧'}`;
+ if(has('protein'))return `Protein: ${tot.p}/${t.protein} g. ${pLeft>15?'Add '+pLeft+' g — eggs, dal, curd, paneer or chicken help.':'Great, target hit 💪'}`;
+ if(has('step','walk'))return `Steps: ${fmtK(d.steps||0)}/${fmtK(t.steps||0)}. ${sLeft>1000?'A '+Math.max(5,Math.round(sLeft/1200))+'-min walk covers the rest 👟':'Goal reached! 👟'}`;
+ if(has('weight','trend')){const L=logsFor(p.id),ks=Object.keys(L).filter(k=>L[k].weight!=null).sort();
+   if(ks.length<2)return "Log your morning weight for a few days and I'll show your trend here.";
+   const first=L[ks[0]].weight,last=L[ks[ks.length-1]].weight,dif=round(last-first,1);
+   return `Your weight went ${first} → ${last} kg (${dif<=0?'down':'up'} ${Math.abs(dif)} kg). `+(p.goal==='lose'?(dif<0?'Good progress — keep the trend going!':'Stay steady with the deficit and steps; give it 1–2 weeks.'):'');
+ }
+ if(has('sugar','diabet','cholesterol','thyroid','pcos','report','blood'))return coachConditionTip(p);
+ return "I can help with what to eat, whether you're on track today, what you're missing, your weight trend, or a quick tip. Tap a suggestion below 👇";
+}
+function coachTip(p){
+ const tips={lose:['Fill half your plate with veg — fewer calories, same fullness.','Protein at every meal keeps you full and protects muscle.','A 10-minute walk after meals helps blood sugar and your step count.','Judge progress by the 7-day average weight, not one day.'],
+  gain:['Add calorie-dense whole foods: nuts, seeds, dairy, measured ghee.','Strength training turns extra calories into muscle, not just fat.','A protein-rich snack before bed supports growth.'],
+  strength:['Aim for roughly 2 g protein per kg bodyweight.','Add a rep or a little weight each week — progressive overload.','Sleep 7–8 h; muscle grows during recovery.'],
+  maintain:['Consistency beats perfection — balanced plates most days.','Keep steps up and strength train 2–3×/week to hold muscle.']};
+ const arr=tips[p.goal]||tips.maintain;return '💡 '+arr[Math.floor(Math.random()*arr.length)];
+}
+function coachConditionTip(p){
+ if(p.condition&&p.condition!=='none'&&CONDITION_TIPS[p.condition]){const ct=CONDITION_TIPS[p.condition];return ct.t+' — '+ct.tips[Math.floor(Math.random()*ct.tips.length)];}
+ const HF=healthFlags().filter(x=>x.f!=='good');
+ if(HF.length){const x=HF[0];return `From your report, ${x.m.label.toLowerCase()} is ${flagLabel(x.f).toLowerCase()}. ${x.m.tips[x.f]||''}`;}
+ return "Add your health condition or lab report in Profile, and I'll tailor advice to it.";
+}
+
 /* ---------- health report → diet ---------- */
 const MARKERS=[
  {k:'sugar',label:'Fasting blood sugar',unit:'mg/dL',flag:v=>v>=126?'high':v>=100?'warn':v<70?'low':'good',cond:'diabetes',
@@ -2109,6 +2252,8 @@ function renderProfile(){
    </div>`;
 
  h+=`<div class="disclaimer">Wellora is a personal wellness tracker, not a medical device. Targets use the Mifflin–St&nbsp;Jeor estimate and are starting points — review with a clinician for medical conditions.</div>`;
+ h+=`<div style="text-align:center;margin-top:16px;color:var(--ink-faint);font-size:12px;font-weight:600">Wellora v${APP_VERSION} · you're on the latest when online
+   <div style="margin-top:8px"><button class="btn ghost sm" onclick="location.reload()">↻ Refresh app</button></div></div>`;
  $('#pane-profile').innerHTML=h;
 }
 function initials(n){return n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';}
@@ -2382,8 +2527,9 @@ function finishOnboarding(){
 }
 
 /* ---------- version, what's new, update banner ---------- */
-const APP_VERSION='1.7';
+const APP_VERSION='1.8';
 const WHATSNEW=[
+ {v:'1.8',items:['💬 Ask your coach — personalized tips from your own data','💊 Log supplements & protein powder (whey, tablets, omega-3)','More dishes; the app now always updates to the latest version']},
  {v:'1.7',items:['🩺 Add your lab report — get diet tips tuned to your numbers','Flags sugar, cholesterol, vitamin D/B12, thyroid & more','One tap tunes your meal plan (e.g. diabetes/thyroid mode)']},
  {v:'1.6',items:['📷 Scan food with your camera — on-device AI suggests the dish','You confirm the meal & servings; calories stay exact','Runs privately on your device — no server, no account']},
  {v:'1.5',items:['Save & auto-backup your data to a file','Privacy & Security policy','Update & new-feature notifications','Daily reminders — water, weigh-in, evening check-in']},
@@ -2494,14 +2640,10 @@ function showInstallBtn(){
 if('serviceWorker' in navigator){
  window.addEventListener('load',()=>{
    navigator.serviceWorker.register('sw.js').then(reg=>{
-     if(reg.waiting&&navigator.serviceWorker.controller)showUpdateBanner(reg);
-     reg.addEventListener('updatefound',()=>{
-       const nw=reg.installing;if(!nw)return;
-       nw.addEventListener('statechange',()=>{if(nw.state==='installed'&&navigator.serviceWorker.controller)showUpdateBanner(reg);});
-     });
+     reg.update();
+     setInterval(()=>reg.update(),30*60*1000);
+     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update();});
    }).catch(()=>{});
-   let reloaded=false;
-   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;location.reload();});
  });
 }
 </script>
