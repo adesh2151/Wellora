@@ -1457,7 +1457,27 @@ function pedStart(resume){
 }
 function pedStop(){ped.active=false;window.removeEventListener('devicemotion',pedHandler);if(ped.acc){savePedSteps();}DB.pedOn=false;save();if(cur==='log')renderLog();toast('Step counter off');}
 /* auto-resume the step counter when the app opens, if it was left on */
+/* native (Android app) all-day step counter via Capacitor plugin */
+function inNativeApp(){try{return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());}catch(e){return false;}}
+async function nativeStepSync(){
+ if(!inNativeApp())return;
+ try{
+  const SC=window.Capacitor.Plugins&&window.Capacitor.Plugins.StepCounter; if(!SC)return;
+  let av; try{av=await SC.isAvailable();}catch(e){return;} if(!av||!av.available)return;
+  try{await SC.requestPerms();}catch(e){}
+  const read=async()=>{
+    let res; try{res=await SC.getCumulative();}catch(e){return;}
+    const cum=res&&res.cumulative; if(cum==null||cum<0)return;
+    const tk=todayKey(); if(!DB.stepBase||DB.stepBase.date!==tk){DB.stepBase={date:tk,base:cum};save();}
+    const dl=dayLog(P().id,tk); const delta=Math.max(0,Math.round(cum-DB.stepBase.base));
+    if(delta>(dl.steps||0)){dl.steps=delta;delete dl.sample;save();if(cur==='log')renderLog();if(cur==='dash')renderDash();}
+  };
+  setTimeout(read,1800); setInterval(read,60000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')read();});
+ }catch(e){}
+}
 function pedResume(){
+ if(inNativeApp())return; // native app uses the OS step counter instead of DeviceMotion
  if(!DB.pedOn||typeof DeviceMotionEvent==='undefined')return;
  if(typeof DeviceMotionEvent.requestPermission==='function'){
    // iOS needs a user gesture to access motion — resume on the first tap.
@@ -2755,7 +2775,7 @@ function remTime(kind,val){return `<input type="time" class="input" style="width
 
 /* ---------- boot ---------- */
 applyTheme();updateChip();
-requestPersist();loadFsHandle();startReminders();pedResume();
+requestPersist();loadFsHandle();startReminders();pedResume();nativeStepSync();
 if(!needsOnboarding())renderDash();
 (function(){
  const s=document.getElementById('splash');
