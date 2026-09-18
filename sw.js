@@ -2,7 +2,7 @@
    Strategy: NETWORK-FIRST for the app itself (so users always get the latest
    version when online), cache only as an offline fallback. This fixes stale/
    cached-old-version problems. Bump CACHE when cached asset files change. */
-const CACHE = 'wellora-v16';
+const CACHE = 'wellora-v17';
 const SHELL = [
   '.', 'index.html', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',

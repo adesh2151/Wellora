@@ -1444,14 +1444,27 @@ function delExercise(id){const d=dayLog(P().id,logDate);d.exercises=(d.exercises
 /* ---------- pedometer (device motion, foreground only) ---------- */
 let ped={active:false,filt:9.8,lastStep:0,acc:0};
 function togglePed(){ped.active?pedStop():pedStart();}
-function pedStart(){
- const begin=()=>{ped.active=true;ped.filt=9.8;ped.lastStep=0;window.addEventListener('devicemotion',pedHandler);renderLog();toast('Step counter on 👟');};
- if(typeof DeviceMotionEvent==='undefined')return toast('No motion sensor on this device');
+function pedStart(resume){
+ if(ped.active)return;
+ const begin=()=>{ped.active=true;ped.filt=9.8;ped.lastStep=0;window.addEventListener('devicemotion',pedHandler);DB.pedOn=true;save();if(cur==='log')renderLog();if(!resume)toast('Step counter on 👟 — stays on across sessions');};
+ if(typeof DeviceMotionEvent==='undefined'){if(!resume)toast('No motion sensor on this device');return;}
  if(typeof DeviceMotionEvent.requestPermission==='function'){
-   DeviceMotionEvent.requestPermission().then(s=>s==='granted'?begin():toast('Motion permission denied')).catch(()=>toast('Motion not available'));
+   DeviceMotionEvent.requestPermission().then(s=>{if(s==='granted')begin();else if(!resume)toast('Motion permission denied');}).catch(()=>{if(!resume)toast('Motion not available');});
  } else begin();
 }
-function pedStop(){ped.active=false;window.removeEventListener('devicemotion',pedHandler);if(ped.acc){savePedSteps();}renderLog();toast('Step counter off');}
+function pedStop(){ped.active=false;window.removeEventListener('devicemotion',pedHandler);if(ped.acc){savePedSteps();}DB.pedOn=false;save();if(cur==='log')renderLog();toast('Step counter off');}
+/* auto-resume the step counter when the app opens, if it was left on */
+function pedResume(){
+ if(!DB.pedOn||typeof DeviceMotionEvent==='undefined')return;
+ if(typeof DeviceMotionEvent.requestPermission==='function'){
+   // iOS needs a user gesture to access motion — resume on the first tap.
+   const go=()=>{document.removeEventListener('touchend',go);document.removeEventListener('click',go);pedStart(true);};
+   document.addEventListener('touchend',go,{once:true});
+   document.addEventListener('click',go,{once:true});
+ } else {
+   pedStart(true); // Android/desktop: resume immediately
+ }
+}
 function pedHandler(e){
  const a=e.accelerationIncludingGravity;if(!a||a.x==null)return;
  const mag=Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z);
@@ -2696,7 +2709,7 @@ function remTime(kind,val){return `<input type="time" class="input" style="width
 
 /* ---------- boot ---------- */
 applyTheme();updateChip();
-requestPersist();loadFsHandle();startReminders();
+requestPersist();loadFsHandle();startReminders();pedResume();
 if(!needsOnboarding())renderDash();
 (function(){
  const s=document.getElementById('splash');
