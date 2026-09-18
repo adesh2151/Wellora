@@ -843,6 +843,33 @@ const FOODS=[
  {n:'Chicken 65',u:'1 plate',kc:320,p:26,c:12,f:18,cat:'Protein'},
  {n:'Mutton biryani',u:'1 plate',kc:520,p:24,c:60,f:20,cat:'Grains'},
  {n:'Prawn fry',u:'1 plate',kc:230,p:24,c:6,f:12,cat:'Protein'},
+
+ /* ---- more common foods ---- */
+ {n:'Rasam',u:'1 katori',kc:60,p:2,c:9,f:2,cat:'Dals'},
+ {n:'Palak dal',u:'1 katori',kc:160,p:9,c:20,f:5,cat:'Dals'},
+ {n:'Dal dhokli',u:'1 bowl',kc:300,p:11,c:44,f:9,cat:'Dals'},
+ {n:'Coconut rice',u:'1 plate',kc:330,p:5,c:52,f:12,cat:'Grains'},
+ {n:'Curd rice',u:'1 bowl',kc:250,p:8,c:40,f:6,cat:'Grains'},
+ {n:'Plain dosa',u:'1',kc:170,p:4,c:28,f:5,cat:'Breakfast'},
+ {n:'Rava dosa',u:'1',kc:220,p:4,c:32,f:9,cat:'Breakfast'},
+ {n:'Appam',u:'2 pcs',kc:200,p:4,c:38,f:4,cat:'Breakfast'},
+ {n:'Ven pongal',u:'1 bowl',kc:280,p:8,c:44,f:8,cat:'Breakfast'},
+ {n:'Thepla',u:'2 pcs',kc:220,p:6,c:32,f:8,cat:'Breakfast'},
+ {n:'Aloo methi',u:'1 katori',kc:150,p:3,c:18,f:8,cat:'Veg'},
+ {n:'Boiled potato',u:'1 medium',kc:110,p:3,c:26,f:0.1,cat:'Veg'},
+ {n:'Khaman dhokla',u:'3 pcs',kc:180,p:7,c:26,f:5,cat:'Snacks'},
+ {n:'Khandvi',u:'4 pcs',kc:150,p:5,c:16,f:7,cat:'Snacks'},
+ {n:'Fafda',u:'30 g',kc:170,p:4,c:16,f:10,cat:'Snacks'},
+ {n:'Roasted makhana',u:'30 g',kc:100,p:3,c:18,f:1,cat:'Snacks'},
+ {n:'Veg raita',u:'1 katori',kc:90,p:4,c:8,f:5,cat:'Dairy'},
+ {n:'Masala chai',u:'1 cup',kc:90,p:2,c:12,f:3.5,cat:'Dairy'},
+ {n:'Badam milk',u:'1 glass',kc:200,p:8,c:24,f:8,cat:'Dairy'},
+ {n:'Sattu drink',u:'1 glass',kc:180,p:10,c:26,f:3,cat:'Other'},
+ {n:'Mixed nuts',u:'20 g',kc:120,p:4,c:5,f:10,cat:'Seeds'},
+ {n:'Kiwi',u:'1',kc:45,p:1,c:11,f:0.4,cat:'Fruit'},
+ {n:'Pear',u:'1 medium',kc:100,p:1,c:27,f:0.2,cat:'Fruit'},
+ {n:'Litchi',u:'1 bowl',kc:80,p:1,c:20,f:0.4,cat:'Fruit'},
+ {n:'Fruit custard',u:'1 katori',kc:200,p:5,c:32,f:6,cat:'Sweets'},
 ];
 const CATEMOJI={Grains:'🌾',Dals:'🫘',Dairy:'🥛',Protein:'🍗',Veg:'🥬',Fruit:'🍎',Seeds:'🌰',
  Breakfast:'🍳',Snacks:'🥟',Sweets:'🍬',Supplements:'💊',Other:'🍵'};
@@ -1039,6 +1066,20 @@ const MICRO={
  'Chicken 65':{b12:0.5,se:24,zn:2},
  'Mutton biryani':{b12:2,fe:2.5,zn:3,se:15},
  'Prawn fry':{b12:1.5,se:30,io:40,zn:1.5},
+ 'Palak dal':{va:300,vk:180,fol:120,fe:3,ca:100,mg:50,fib:5},
+ 'Rasam':{vc:8,fol:40,k:200,fib:2},
+ 'Curd rice':{ca:150,b12:0.4,k:180,fib:1},
+ 'Aloo methi':{va:150,vk:120,vc:12,k:350,fib:3,fe:2},
+ 'Boiled potato':{k:420,vc:12,fib:2},
+ 'Veg raita':{ca:120,b12:0.3,k:150,vc:4},
+ 'Badam milk':{ca:280,vd:1,b12:0.9,ve:3,mg:30},
+ 'Sattu drink':{fe:3,fol:90,mg:50,fib:4,k:250},
+ 'Mixed nuts':{ve:3,mg:45,fe:1,zn:1,fib:2},
+ 'Kiwi':{vc:70,vk:30,k:200,fib:2},
+ 'Pear':{vc:7,fib:5,k:180},
+ 'Litchi':{vc:70,k:170,fib:1},
+ 'Roasted makhana':{ca:60,mg:35,fib:2,k:100},
+ 'Khaman dhokla':{fol:50,fe:2,fib:3},
  'Orange juice (fresh)':{vc:80,fol:40,k:450},
  'Mosambi juice':{vc:60,fol:35,k:400},
  'Pomegranate juice':{vc:10,k:530,vk:25},
@@ -1134,6 +1175,8 @@ function computeTargets(p){
  if(p.goal==='lose'){cal=tdee-500;pf=1.9;}
  else if(p.goal==='gain'){cal=tdee+350;pf=1.8;}
  else if(p.goal==='strength'){cal=tdee+150;pf=2.0;}
+ else if(p.goal==='recomp'){cal=tdee-100;pf=2.0;}
+ else if(p.goal==='wellness'){cal=tdee;pf=1.6;}
  else {cal=tdee;pf=1.7;}
  // condition-aware adjustments (higher protein, lower-carb for PCOS/diabetes)
  const cond=p.condition||'none';
@@ -1290,7 +1333,8 @@ function countUp(node){
 }
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const GOALS={lose:{label:'Weight loss',icon:'📉'},gain:{label:'Weight gain',icon:'📈'},
- maintain:{label:'Maintain',icon:'⚖️'},strength:{label:'Strength',icon:'💪'}};
+ maintain:{label:'Maintain',icon:'⚖️'},strength:{label:'Strength',icon:'💪'},
+ recomp:{label:'Recomp',icon:'🔁'},wellness:{label:'Stay healthy',icon:'🌿'}};
 function fmtK(n){return n>=1000?(n/1000).toFixed(n%1000===0?0:1)+'k':String(n);}
 
 /* ---------- LOG ---------- */
@@ -1336,9 +1380,9 @@ function renderLog(){
      <span class="mi" style="background:${bg}">${emoji}</span><b>${label}</b>
      <span class="kc tnum">${mkc} kcal</span></div>`;
    items.forEach(x=>{
-     h+=`<div class="food-item"><div style="min-width:0">
-       <div class="fn">${esc(x.n)}</div>
-       <div class="fm tnum">${x.qty>1?x.qty+'× · ':''}P ${round(x.p)} · C ${round(x.c)} · F ${round(x.f)}</div></div>
+     h+=`<div class="food-item"><div style="min-width:0;flex:1;cursor:pointer" onclick="foodDetailById('${x.id}')">
+       <div class="fn">${esc(x.n)} <span class="faint" style="font-weight:700">ⓘ</span></div>
+       <div class="fm tnum">${x.qty!==1?x.qty+'× · ':''}P ${round(x.p)} · C ${round(x.c)} · F ${round(x.f)} g</div></div>
        <span class="fk tnum">${x.kc}</span>
        <button class="del" onclick="delFood('${x.id}')" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
    });
@@ -1418,6 +1462,16 @@ const EXERCISES=[
  {n:'Cricket',met:5.0,icon:'🏏'},{n:'Football',met:7.0,icon:'⚽'},
  {n:'Badminton',met:5.5,icon:'🏸'},{n:'Gym cardio',met:5.0,icon:'🏃'},
  {n:'Trekking / hiking',met:6.0,icon:'🥾'},{n:'Household chores',met:3.3,icon:'🧹'},
+ {n:'Pilates',met:3.0,icon:'🧘'},{n:'Elliptical / cross-trainer',met:5.0,icon:'🏃'},
+ {n:'Rowing machine',met:7.0,icon:'🚣'},{n:'Treadmill run',met:8.0,icon:'🏃'},
+ {n:'Weightlifting (heavy)',met:6.0,icon:'🏋️'},{n:'Table tennis',met:4.0,icon:'🏓'},
+ {n:'Tennis',met:7.3,icon:'🎾'},{n:'Basketball',met:6.5,icon:'🏀'},
+ {n:'Volleyball',met:4.0,icon:'🏐'},{n:'Kabaddi',met:7.0,icon:'🤼'},
+ {n:'Kho-kho',met:6.5,icon:'🏃'},{n:'Aerobics',met:6.5,icon:'🤸'},
+ {n:'Boxing / kickboxing',met:8.0,icon:'🥊'},{n:'Martial arts',met:8.0,icon:'🥋'},
+ {n:'Gardening',met:3.8,icon:'🌱'},{n:'Playing with kids',met:4.0,icon:'🤾'},
+ {n:'Mopping / cleaning',met:3.5,icon:'🧽'},{n:'Cardio dance',met:6.0,icon:'💃'},
+ {n:'Spinning class',met:8.5,icon:'🚴'},{n:'Cricket (match)',met:6.0,icon:'🏏'},
 ];
 let exSel=EXERCISES[0], exMin=30;
 function exKc(){const wt=currentWeight(P().id);return Math.round(exSel.met*wt*(exMin/60));}
@@ -1652,6 +1706,48 @@ function dayMicros(d){
 function microRda(n,t){return n.k==='fib'?(t.fiber||32):n.rda;}
 function microCovered(mic,t){return NUTRIENTS.filter(n=>mic[n.k]/microRda(n,t)>=0.7).length;}
 function fmtMicro(v){return v>=100?Math.round(v):v>=10?Math.round(v):round(v,1);}
+/* ---------- per-item full nutrition (macros + micros) ---------- */
+function foodDetailById(id){
+ const d=dayLog(P().id,logDate);const x=(d.foods||[]).find(f=>f.id===id);if(!x)return;
+ const f=FOODS.find(ff=>ff.n===x.n),t=activeTargets(P()),mic=MICRO[x.n]||{},qty=x.qty||1;
+ let h=`<div class="modal-head"><h3>${esc(x.n)}</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
+ h+=`<div class="faint" style="font-weight:600;margin-bottom:12px">${qty!==1?qty+' servings':'1 serving'}${f?' · '+esc(f.u):''}</div>`;
+ h+=`<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+   <div class="stat"><div class="k">Calories</div><div class="v tnum">${x.kc}</div></div>
+   <div class="stat"><div class="k">Protein</div><div class="v tnum">${round(x.p)}<small>g</small></div></div>
+   <div class="stat"><div class="k">Carbs</div><div class="v tnum">${round(x.c)}<small>g</small></div></div>
+   <div class="stat"><div class="k">Fat</div><div class="v tnum">${round(x.f)}<small>g</small></div></div></div>`;
+ const rows=NUTRIENTS.map(n=>{const v=(mic[n.k]||0)*qty;if(v<=0)return '';const need=microRda(n,t);return `<div class="nutri-row" style="padding:8px 0"><div class="nutri-top"><b style="font-size:13px">${n.n}</b><span class="tnum">${fmtMicro(v)} ${n.u} · ${Math.round(v/need*100)}% of day</span></div></div>`;}).filter(Boolean).join('');
+ h+=rows?`<div class="pm-t" style="margin:2px 0 4px">Vitamins & minerals it provides</div><div class="card" style="padding:2px 14px">${rows}</div>`:`<div class="faint" style="font-size:12px">No micronutrient estimate for this item yet.</div>`;
+ openModal(h);
+}
+
+/* ---------- nutrient calculator & food sources ---------- */
+const CALC_NUTRIENTS=[{k:'protein',n:'Protein',u:'g',macro:true},{k:'carb',n:'Carbs',u:'g',macro:true},{k:'fat',n:'Fat',u:'g',macro:true}].concat(NUTRIENTS);
+function foodNut(f,k){if(k==='protein')return f.p;if(k==='carb')return f.c;if(k==='fat')return f.f;const m=MICRO[f.n];return m&&m[k]!=null?m[k]:0;}
+let calcKey='protein',calcTarget=0;
+function calcMeta(){return CALC_NUTRIENTS.find(x=>x.k===calcKey);}
+function defaultTargetFor(meta){const t=activeTargets(P());if(meta.k==='protein')return t.protein;if(meta.k==='carb')return t.carb;if(meta.k==='fat')return t.fat;return microRda(meta,t);}
+function openNutrientCalc(){calcKey='protein';calcTarget=defaultTargetFor(calcMeta());renderCalc();}
+function calcPick(k){calcKey=k;calcTarget=defaultTargetFor(calcMeta());renderCalc();}
+function calcTargetIn(v){calcTarget=Math.max(0,+v||0);renderCalcList();}
+function renderCalcList(){
+ const meta=calcMeta();const hdr=document.getElementById('calcHdr');if(hdr)hdr.textContent='To reach '+round(calcTarget,1)+' '+meta.u+' — best sources:';
+ const ranked=FOODS.map(f=>({f,per:foodNut(f,meta.k)})).filter(x=>x.per>0).sort((a,b)=>b.per-a.per).slice(0,18);
+ const el=document.getElementById('calcList');if(!el)return;
+ el.innerHTML=ranked.map(({f,per})=>{const s=calcTarget>0?calcTarget/per:0;return `<div class="sr"><span style="font-size:18px">${CATEMOJI[f.cat]}</span><div style="min-width:0"><div class="srn">${esc(f.n)}</div><div class="srm">${round(s,1)}× ${esc(f.u)} · ${Math.round(f.kc*s)} kcal &nbsp;·&nbsp; ${fmtMicro(per)} ${meta.u}/serving</div></div></div>`;}).join('')||'<div class="empty">No sources found.</div>';
+}
+function renderCalc(){
+ const meta=calcMeta();
+ let h=`<div class="modal-head"><h3>🧮 Nutrient calculator</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
+ h+=`<p class="faint" style="font-size:12.5px;margin-bottom:8px">Pick a nutrient + target → see the best foods and how much of each reaches it.</p>`;
+ h+=`<div class="chip-list" style="max-height:118px;overflow-y:auto">${CALC_NUTRIENTS.map(x=>`<button class="fchip" style="${x.k===calcKey?'border-color:var(--primary);color:var(--primary);background:var(--primary-soft)':''}" onclick="calcPick('${x.k}')">${x.n}</button>`).join('')}</div>`;
+ h+=`<div class="field" style="margin-top:12px"><label>Target ${meta.n} (${meta.u})</label><input class="input" id="calcT" type="number" inputmode="decimal" value="${round(calcTarget,1)}" oninput="calcTargetIn(this.value)"></div>`;
+ h+=`<div class="pm-t" id="calcHdr" style="margin:4px 0">To reach ${round(calcTarget,1)} ${meta.u} — best sources:</div>`;
+ h+=`<div class="search-list" id="calcList" style="max-height:42vh"></div>`;
+ openModal(h);renderCalcList();
+}
+
 function renderNutrients(){
  const p=P(),t=activeTargets(p),d=today();
  const mic=dayMicros(d);
@@ -1666,6 +1762,7 @@ function renderNutrients(){
      <div class="ring-center"><b class="tnum" style="font-size:18px">${covered}</b><small>/${NUTRIENTS.length}</small></div></div>
    <div><div style="font-family:var(--display);font-weight:800;font-size:17px">${strong} fully met · ${covered} on track</div>
    <div class="faint" style="font-size:13px;font-weight:600;margin-top:2px">Estimated from today's logged foods, vs daily targets. Aim to cover most across the week.</div></div></div>`;
+ h+=`<button class="btn accent block" style="margin-top:12px" onclick="openNutrientCalc()">🧮 Nutrient calculator — what to eat to hit a target</button>`;
 
  ['Vitamins','Minerals','Fats & fiber'].forEach(g=>{
    h+=`<div class="section-title">${g}<span class="line"></span></div><div class="card">`;
@@ -1854,12 +1951,16 @@ const WEEK_PATTERN={
  gain:['strA','rest','strB','walk','strA','strB','rest'],
  strength:['strA','core','strB','walk','strA','strB','rest'],
  maintain:['strA','walk','core','walk','strB','walk','rest'],
+ recomp:['strA','walk','strB','core','strA','strB','rest'],
+ wellness:['walk','strA','walk','core','walk','strB','rest'],
 };
 const GOAL_NOTE={
  lose:'Moderate calorie deficit + daily walking + 3 strength days. Judge progress on the 7-day weight trend, not one reading.',
  gain:'Slight surplus + 4 strength days. Add a rep or a little weight each week (progressive overload).',
  strength:'Near-maintenance calories, high protein, 4 strength days with steady progression.',
  maintain:'Balanced calories with steps and 2–3 strength days to hold muscle.',
+ recomp:'Eat around maintenance with high protein + regular strength training to lose fat and build muscle at the same time. Progress is slow but steady.',
+ wellness:'Balanced, varied eating and daily movement for overall health — not focused on the scale.',
 };
 
 /* ---------- PLAN ---------- */
@@ -2693,8 +2794,9 @@ function finishOnboarding(){
 }
 
 /* ---------- version, what's new, update banner ---------- */
-const APP_VERSION='2.0';
+const APP_VERSION='2.1';
 const WHATSNEW=[
+ {v:'2.1',items:['🧮 Nutrient calculator — how much to eat to hit any target','Tap any logged food to see full macros + vitamins it gives','More goals, 40+ exercises, and lots more foods']},
  {v:'2.0',items:['✍️ Build your own custom meal plan — add foods per meal','🎨 New premium violet & gold look','💬 Coach, scan food, health-report diet & more']},
  {v:'1.9',items:['⚡ Quick add — type or speak in plain words','e.g. “2 bhakri, an apple, 4100 steps, walked 30 min”','It logs foods, steps, water, exercise & weight at once']},
  {v:'1.8',items:['💬 Ask your coach — personalized tips from your own data','💊 Log supplements & protein powder (whey, tablets, omega-3)','More dishes; the app now always updates to the latest version']},
