@@ -1480,6 +1480,10 @@ const EXERCISES=[
  {n:'Gardening',met:3.8,icon:'🌱'},{n:'Playing with kids',met:4.0,icon:'🤾'},
  {n:'Mopping / cleaning',met:3.5,icon:'🧽'},{n:'Cardio dance',met:6.0,icon:'💃'},
  {n:'Spinning class',met:8.5,icon:'🚴'},{n:'Cricket (match)',met:6.0,icon:'🏏'},
+ {n:'Farming / field work',met:5.5,icon:'🌾'},{n:'Manual labour / construction',met:5.5,icon:'👷'},
+ {n:'Carrying / loading loads',met:6.5,icon:'📦'},{n:'Cattle / livestock work',met:4.5,icon:'🐄'},
+ {n:'Digging / shovelling',met:5.0,icon:'⛏️'},{n:'Wood chopping / axe work',met:6.3,icon:'🪓'},
+ {n:'Standing / on-feet work',met:2.5,icon:'🧍'},{n:'Warehouse / factory work',met:4.0,icon:'🏭'},
 ];
 let exSel=EXERCISES[0], exMin=30;
 function exKc(){const wt=currentWeight(P().id);return Math.round(exSel.met*wt*(exMin/60));}
@@ -2570,10 +2574,11 @@ function editProfile(id){
     <div class="field"><label>Start wt (kg)</label><input class="input" id="ep-sw" type="number" step="0.1" value="${p.startWeight}"></div></div>
    <div class="row2"><div class="field"><label>Goal weight (kg)</label><input class="input" id="ep-gw" type="number" step="0.1" value="${p.goalWeight}"></div>
    <div class="field"><label>Activity</label><select class="input" id="ep-act">
-     <option value="1.2" ${p.activity==1.2?'selected':''}>Sedentary</option>
-     <option value="1.375" ${p.activity==1.375?'selected':''}>Light (walks)</option>
-     <option value="1.55" ${p.activity==1.55?'selected':''}>Moderate</option>
-     <option value="1.725" ${p.activity==1.725?'selected':''}>Active</option></select></div></div>
+     <option value="1.2" ${p.activity==1.2?'selected':''}>Sedentary — desk job, little movement</option>
+     <option value="1.375" ${p.activity==1.375?'selected':''}>Light — some walking / light chores</option>
+     <option value="1.55" ${p.activity==1.55?'selected':''}>Moderate — gym or sport 3–5×/wk, or on-feet job</option>
+     <option value="1.725" ${p.activity==1.725?'selected':''}>Very active — hard training daily, or physical job</option>
+     <option value="1.9" ${p.activity==1.9?'selected':''}>Heavy labour — farming / construction / loading</option></select></div></div>
    <label class="check ${p.autoTargets?'on':''}" id="ep-auto" onclick="this.classList.toggle('on')" style="border:none;padding:6px 0">
      <span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
      <span class="ctxt">Auto-calculate my calorie & macro targets</span></label>`;
@@ -2800,8 +2805,11 @@ function showOnboarding(){
      <div class="row2">
        <div class="field"><label>Goal weight (kg)</label><input class="input" id="ob-gw" type="number" inputmode="decimal" placeholder="65"></div>
        <div class="field"><label>Daily activity</label><select class="input" id="ob-act">
-         <option value="1.2">Sedentary</option><option value="1.375" selected>Light (walks)</option>
-         <option value="1.55">Moderate</option><option value="1.725">Active</option></select></div>
+         <option value="1.2">Sedentary — desk job, little movement</option>
+         <option value="1.375" selected>Light — some walking / light chores</option>
+         <option value="1.55">Moderate — gym or sport 3–5×/wk, or on-feet job</option>
+         <option value="1.725">Very active — hard training daily, or physical job</option>
+         <option value="1.9">Heavy labour — farming / construction / loading</option></select></div>
      </div>
      <button class="btn block accent" style="margin-top:6px" onclick="finishOnboarding()">Create my profile →</button>
    </div>
@@ -2823,8 +2831,9 @@ function finishOnboarding(){
 }
 
 /* ---------- version, what's new, update banner ---------- */
-const APP_VERSION='2.2';
+const APP_VERSION='2.3';
 const WHATSNEW=[
+ {v:'2.3',items:['🌾 Activity now fits every lifestyle — farming, labour, gym, sports','Clearer daily-activity levels (desk job → heavy labour)','More ways to log real work, not just walking']},
  {v:'2.2',items:['🔁 Repeat yesterday — copy a whole day of meals in one tap','⏱️ Recent foods appear first when you add a meal','☀️ Sunlight tracker adds to your vitamin D · 🔥 daily streak']},
  {v:'2.1',items:['🧮 Nutrient calculator — how much to eat to hit any target','Tap any logged food to see full macros + vitamins it gives','More goals, 40+ exercises, and lots more foods']},
  {v:'2.0',items:['✍️ Build your own custom meal plan — add foods per meal','🎨 New premium violet & gold look','💬 Coach, scan food, health-report diet & more']},
