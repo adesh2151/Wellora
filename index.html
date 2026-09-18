@@ -1866,7 +1866,9 @@ function renderPlan(){
      <div class="hero-top"><div><h2 style="font-size:22px">Build your plan</h2>
        <div class="sub" style="font-size:13px;color:rgba(255,255,255,.9);font-weight:600;margin-top:4px">Auto-create a 7-day Maharashtrian meal plan + weekly workout, tuned to your goal, food preference and calorie target.</div></div>
        <span style="font-size:30px">🍽️</span></div>
-     <button class="btn accent block" style="margin-top:14px" onclick="openGenerator()">✨ Generate my plan</button></div>`;
+     <div class="btn-row" style="margin-top:14px">
+       <button class="btn accent" style="flex:1;min-width:150px" onclick="openGenerator()">✨ Auto-generate</button>
+       <button class="btn" style="flex:1;min-width:150px;background:rgba(255,255,255,.18);color:#fff" onclick="createCustomPlan()">✍️ Build my own</button></div></div>`;
  }
 
  h+=`<div class="section-title">${gp?'Meal plan':'Weekly meal plan'}<span class="line"></span><span class="pill pri">${gp?DIETS[gp.diet].label:'Maharashtrian'}</span></div>`;
@@ -1876,10 +1878,13 @@ function renderPlan(){
  MEALMETA.forEach(([slot,label,emoji,bg])=>{
    if(gp){
      const items=gp.meals[day][slot]||[];
-     h+=`<div class="plan-meal"><span class="pm-ic" style="background:${bg}">${emoji}</span>
-       <div style="flex:1"><div class="pm-t">${label} · <span class="tnum">${mealKc(items)} kcal</span></div>
-       <div class="pm-d">${items.map(x=>`${x.qty!==1?x.qty+'× ':''}${esc(x.n)}`).join(' + ')}</div></div>
-       <button class="btn ghost sm" onclick="logGenMeal('${day}','${slot}')" title="Log to today">＋</button></div>`;
+     h+=`<div class="plan-meal" style="align-items:flex-start"><span class="pm-ic" style="background:${bg}">${emoji}</span>
+       <div style="flex:1;min-width:0">
+        <div class="pm-t">${label} · <span class="tnum">${mealKc(items)} kcal</span>
+          ${items.length?`<button class="btn ghost sm" style="padding:2px 9px;font-size:11px;margin-left:6px" onclick="logGenMeal('${day}','${slot}')">log →</button>`:''}</div>
+        ${items.map((x,i)=>`<div class="food-item" style="padding:6px 0"><div style="min-width:0"><div class="fn" style="font-size:13px">${x.qty!==1?x.qty+'× ':''}${esc(x.n)}</div><div class="fm tnum">${x.kc} kcal</div></div><button class="del" onclick="planDelItem('${day}','${slot}',${i})" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`).join('')}
+        <div class="add-food" onclick="openPlanFood('${day}','${slot}')"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add food</div>
+       </div></div>`;
    } else {
      const pd=PLAN[day];
      h+=`<div class="plan-meal"><span class="pm-ic" style="background:${bg}">${emoji}</span>
@@ -1973,6 +1978,43 @@ function logGenDay(day){
  ['b','s','l','d'].forEach(slot=>(gp.meals[day][slot]||[]).forEach(x=>d.foods.push(Object.assign({id:'f'+Math.random().toString(36).slice(2,9),slot},x))));
  delete d.sample;save();toast('Logged whole day');go('log');
 }
+/* ---- custom plan editing ---- */
+function createCustomPlan(){
+ const p=P(),meals={};
+ GEN_DAYS.forEach(d=>meals[d]={b:[],s:[],l:[],d:[]});
+ p.genPlan={createdAt:todayKey(),diet:p.diet||'veg',goal:p.goal,condition:p.condition||'none',cal:activeTargets(p).cal,meals,custom:true};
+ save();renderPlan();toast('Blank plan created — add your foods per meal');
+}
+let planTarget=null,pfIdx=0;
+function openPlanFood(day,slot){
+ planTarget={day,slot};
+ const meta=MEALMETA.find(m=>m[0]===slot);
+ let h=`<div class="modal-head"><h3>Add to ${meta[1]} · ${day}</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
+ h+=`<input class="input" id="pfSearch" placeholder="Search foods (dal, paneer, poha…)" oninput="pfFilter(this.value)" autocomplete="off"><div class="search-list" id="pfResults"></div>`;
+ openModal(h);pfFilter('');
+ setTimeout(()=>{const e=document.getElementById('pfSearch');if(e)e.focus();},250);
+}
+function pfFilter(q){q=(q||'').toLowerCase().trim();
+ const list=FOODS.map((f,i)=>[f,i]).filter(([f])=>!q||f.n.toLowerCase().includes(q)||f.cat.toLowerCase().includes(q)).slice(0,30);
+ const el=document.getElementById('pfResults');if(el)el.innerHTML=list.map(([f,i])=>`<div class="sr" onclick="pfPick(${i})"><span style="font-size:18px">${CATEMOJI[f.cat]}</span><div style="min-width:0"><div class="srn">${esc(f.n)}</div><div class="srm">${esc(f.u)} · ${f.kc} kcal</div></div></div>`).join('')||`<div class="empty">No match</div>`;}
+function pfPick(idx){pfIdx=idx;const f=FOODS[idx];
+ let h=`<div class="modal-head"><h3>${esc(f.n)}</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+   <div class="faint" style="font-weight:600;margin-bottom:12px">${esc(f.u)} · ${f.kc} kcal · P${f.p} C${f.c} F${f.f}</div>
+   <div class="field"><label>Servings</label><div class="stepper wide" style="width:fit-content"><button onclick="pfStep(-0.5)">−</button><input id="pfQ" type="number" step="0.5" value="1" style="width:80px" oninput="pfPrev()"><button onclick="pfStep(0.5)">+</button></div></div>
+   <div class="card" style="background:var(--surface-2);margin-bottom:12px"><b class="tnum" id="pfKc">${f.kc} kcal</b></div>
+   <button class="btn block accent" onclick="pfAdd()">Add to plan</button>`;
+ openModal(h);
+}
+function pfStep(n){const inp=document.getElementById('pfQ');inp.value=Math.max(0.5,round((+inp.value||1)+n,1));pfPrev();}
+function pfPrev(){const q=+document.getElementById('pfQ').value||1;const el=document.getElementById('pfKc');if(el)el.textContent=Math.round(FOODS[pfIdx].kc*q)+' kcal';}
+function pfAdd(){
+ const q=+document.getElementById('pfQ').value||1,f=FOODS[pfIdx],p=P();if(!p.genPlan||!planTarget)return;
+ const {day,slot}=planTarget;p.genPlan.meals[day]=p.genPlan.meals[day]||{b:[],s:[],l:[],d:[]};
+ p.genPlan.meals[day][slot]=p.genPlan.meals[day][slot]||[];
+ p.genPlan.meals[day][slot].push({n:f.n,qty:q,kc:Math.round(f.kc*q),p:round(f.p*q,1),c:round(f.c*q,1),f:round(f.f*q,1)});
+ save();closeModal();renderPlan();toast(f.n+' added');
+}
+function planDelItem(day,slot,i){const p=P();if(!p.genPlan)return;(p.genPlan.meals[day][slot]||[]).splice(i,1);save();renderPlan();}
 function logPlanMeal(slot,day){
  // add plan text as a quick note entry (0 est if unknown) — user can edit; we estimate via rough defaults
  addSlot=slot;const pd=PLAN[day];const txt=pd[{b:'b',s:'s',l:'l',d:'d'}[slot]];
@@ -2626,8 +2668,9 @@ function finishOnboarding(){
 }
 
 /* ---------- version, what's new, update banner ---------- */
-const APP_VERSION='1.9';
+const APP_VERSION='2.0';
 const WHATSNEW=[
+ {v:'2.0',items:['✍️ Build your own custom meal plan — add foods per meal','🎨 New premium violet & gold look','💬 Coach, scan food, health-report diet & more']},
  {v:'1.9',items:['⚡ Quick add — type or speak in plain words','e.g. “2 bhakri, an apple, 4100 steps, walked 30 min”','It logs foods, steps, water, exercise & weight at once']},
  {v:'1.8',items:['💬 Ask your coach — personalized tips from your own data','💊 Log supplements & protein powder (whey, tablets, omega-3)','More dishes; the app now always updates to the latest version']},
  {v:'1.7',items:['🩺 Add your lab report — get diet tips tuned to your numbers','Flags sugar, cholesterol, vitamin D/B12, thyroid & more','One tap tunes your meal plan (e.g. diabetes/thyroid mode)']},
