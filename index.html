@@ -2413,6 +2413,11 @@ function renderProfile(){
    </div>`;
 
  h+=`<div class="disclaimer">Wellora is a personal wellness tracker, not a medical device. Targets use the Mifflin–St&nbsp;Jeor estimate and are starting points — review with a clinician for medical conditions.</div>`;
+ if(!inNativeApp()&&/Android/i.test(navigator.userAgent)){
+   h+=`<div class="section-title">Android app<span class="line"></span></div><div class="card">
+     <a class="btn accent block" href="https://github.com/adesh2151/Wellora/releases/latest/download/Wellora.apk" style="text-decoration:none">📱 Get the Android app</a>
+     <div class="faint" style="font-size:11.5px;margin-top:8px">Installs Wellora with all-day background step counting. When asked, allow “install from unknown sources”. Features still update automatically.</div></div>`;
+ }
  h+=`<div style="text-align:center;margin-top:16px;color:var(--ink-faint);font-size:12px;font-weight:600">Wellora v${APP_VERSION} · you're on the latest when online
    <div style="margin-top:8px"><button class="btn ghost sm" onclick="location.reload()">↻ Refresh app</button></div></div>`;
  $('#pane-profile').innerHTML=h;
