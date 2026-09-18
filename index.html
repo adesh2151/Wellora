@@ -1222,11 +1222,13 @@ function renderDash(){
  const habitsDone=HABITS.filter((_,i)=>d.habits[i]).length;
  const now=new Date();
  const greet=now.getHours()<12?'Good morning':now.getHours()<17?'Good afternoon':'Good evening';
+ const streak=currentStreak();
 
  let h=`<div class="card hero">
    <div class="hero-top">
      <div><div class="sub" style="font-size:13px;font-weight:700;color:rgba(255,255,255,.82)">${greet},</div>
-     <h2 style="font-size:24px">${esc(p.name)}</h2></div>
+     <h2 style="font-size:24px">${esc(p.name)}</h2>
+     ${streak>0?`<div style="margin-top:5px"><span class="goaltag" style="background:rgba(255,255,255,.16)">🔥 ${streak}-day streak</span></div>`:''}</div>
      <span class="goaltag">${GOALS[p.goal].icon} ${GOALS[p.goal].label}</span>
    </div>
    <div style="font-size:13px;color:rgba(255,255,255,.9);font-weight:600">
@@ -1370,7 +1372,8 @@ function renderLog(){
  // scan + quick add
  h+=`<div class="btn-row" style="margin-top:14px">
      <button class="btn accent" style="flex:1;min-width:140px" onclick="openScan()"><svg viewBox="0 0 24 24" fill="none" style="width:17px;height:17px"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/></svg> Scan food</button>
-     <button class="btn" style="flex:1;min-width:140px" onclick="openQuickAdd()">⚡ Quick add (type/speak)</button></div>`;
+     <button class="btn" style="flex:1;min-width:140px" onclick="openQuickAdd()">⚡ Quick add (type/speak)</button>
+     <button class="btn" style="flex:1;min-width:140px" onclick="repeatYesterday()">🔁 Repeat yesterday</button></div>`;
  // meals
  h+=`<div style="margin-top:16px">`;
  MEALMETA.forEach(([slot,label,emoji,bg])=>{
@@ -1418,6 +1421,11 @@ function renderLog(){
    <div class="tv"><div class="stepper"><button onclick="setNum('sleep',-0.5)">−</button>
      <input id="in-sleep" type="number" step="0.5" value="${d.sleep||''}" placeholder="0" onchange="setSleepInput(this.value)"><button onclick="setNum('sleep',0.5)">+</button></div>
      <span class="faint" style="font-weight:700">h</span></div></div>`;
+ h+=`<div class="track-row"><div class="track-ic" style="background:#fbeccb">☀️</div>
+   <div><div class="tl">Sunlight</div><div class="ts tnum">${d.sun||0} min · ~${Math.round(Math.min(d.sun||0,30)*0.9)} µg vitamin D</div></div>
+   <div class="tv"><div class="stepper"><button onclick="setNum('sun',-5)">−</button>
+     <input id="in-sun" type="number" value="${d.sun||0}" onchange="setFieldInput('sun',this.value)"><button onclick="setNum('sun',5)">+</button></div>
+     <span class="faint" style="font-weight:700">min</span></div></div>`;
  h+=`</div>`;
 
  // habit checklist
@@ -1563,6 +1571,10 @@ function openAddFood(slot){addSlot=slot;
  const meta=MEALMETA.find(m=>m[0]===slot);
  let h=`<div class="modal-head"><h3>Add to ${meta[1]}</h3><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>`;
  h+=`<input class="input" id="foodSearch" placeholder="Search foods (dal, bhakri, paneer...)" oninput="filterFoods(this.value)" autocomplete="off">`;
+ if(DB.recent&&DB.recent.length){
+   h+=`<div class="pm-t" style="margin:10px 0 6px">⏱️ Recent</div><div class="chip-list">`+
+     DB.recent.map(n=>{const i=FOODS.findIndex(f=>f.n===n);return i>=0?`<button class="fchip" onclick="pickFood(${i})">${esc(n)}</button>`:'';}).join('')+`</div>`;
+ }
  h+=`<div class="search-list" id="foodResults"></div>`;
  h+=`<div class="section-title" style="margin:14px 0 8px">Or add custom<span class="line"></span></div>`;
  h+=`<div class="field"><input class="input" id="cfName" placeholder="Food name"></div>
@@ -1611,7 +1623,13 @@ function addCustom(){
 function addFoodEntry(o){
  const d=dayLog(P().id,logDate);
  d.foods.push(Object.assign({id:'f'+Math.random().toString(36).slice(2,9),slot:addSlot},o));
- delete d.sample;save();closeModal();renderLog();toast(o.n+' added');
+ pushRecent(o.n);delete d.sample;save();closeModal();renderLog();toast(o.n+' added');
+}
+function repeatYesterday(){
+ const p=P();const y=dayLog(p.id,fmtKey(addDays(parseKey(logDate),-1)));const d=dayLog(p.id,logDate);
+ if(!y.foods||!y.foods.length)return toast('Nothing logged the day before');
+ y.foods.forEach(x=>d.foods.push(Object.assign({},x,{id:'f'+Math.random().toString(36).slice(2,9)})));
+ delete d.sample;save();renderLog();toast('Copied '+y.foods.length+' items from yesterday');
 }
 
 /* ---------- 📷 scan food (on-device AI) ---------- */
@@ -1701,8 +1719,19 @@ function dayMicros(d){
  const tot={};NUTRIENTS.forEach(n=>tot[n.k]=0);
  (d.foods||[]).forEach(f=>{const m=MICRO[f.n];if(!m)return;const q=f.qty||1;
    for(const k in m)if(k in tot)tot[k]+=m[k]*q;});
+ if(d.sun)tot.vd+=Math.min(d.sun,30)*0.9; // sunlight → vitamin D estimate (~0.9µg/min, cap 30 min)
  return tot;
 }
+/* streak: consecutive days with any activity (ending today or yesterday) */
+function currentStreak(){
+ const L=logsFor(P().id);
+ const act=k=>{const d=L[k];return !!(d&&((d.foods&&d.foods.length)||d.steps||d.weight!=null||d.sun||(d.exercises&&d.exercises.length)));};
+ let streak=0,i=act(fmtKey(new Date()))?0:1;
+ for(;i<400;i++){if(act(fmtKey(addDays(new Date(),-i))))streak++;else break;}
+ return streak;
+}
+/* recently-logged foods for quick re-add */
+function pushRecent(name){if(!FOODS.some(f=>f.n===name))return;DB.recent=[name,...(DB.recent||[]).filter(x=>x!==name)].slice(0,12);}
 function microRda(n,t){return n.k==='fib'?(t.fiber||32):n.rda;}
 function microCovered(mic,t){return NUTRIENTS.filter(n=>mic[n.k]/microRda(n,t)>=0.7).length;}
 function fmtMicro(v){return v>=100?Math.round(v):v>=10?Math.round(v):round(v,1);}
@@ -2794,8 +2823,9 @@ function finishOnboarding(){
 }
 
 /* ---------- version, what's new, update banner ---------- */
-const APP_VERSION='2.1';
+const APP_VERSION='2.2';
 const WHATSNEW=[
+ {v:'2.2',items:['🔁 Repeat yesterday — copy a whole day of meals in one tap','⏱️ Recent foods appear first when you add a meal','☀️ Sunlight tracker adds to your vitamin D · 🔥 daily streak']},
  {v:'2.1',items:['🧮 Nutrient calculator — how much to eat to hit any target','Tap any logged food to see full macros + vitamins it gives','More goals, 40+ exercises, and lots more foods']},
  {v:'2.0',items:['✍️ Build your own custom meal plan — add foods per meal','🎨 New premium violet & gold look','💬 Coach, scan food, health-report diet & more']},
  {v:'1.9',items:['⚡ Quick add — type or speak in plain words','e.g. “2 bhakri, an apple, 4100 steps, walked 30 min”','It logs foods, steps, water, exercise & weight at once']},
