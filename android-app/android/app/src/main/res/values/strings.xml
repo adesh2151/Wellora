@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Wellora</string>
+    <string name="title_activity_main">Wellora</string>
+    <string name="package_name">com.adesh.wellora</string>
+    <string name="custom_url_scheme">com.adesh.wellora</string>
+</resources>

@@ -1,0 +1,9 @@
+{
+  "appId": "com.adesh.wellora",
+  "appName": "Wellora",
+  "webDir": "www",
+  "server": {
+    "url": "https://adesh2151.github.io/Wellora/",
+    "androidScheme": "https"
+  }
+}
