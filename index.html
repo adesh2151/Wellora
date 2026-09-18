@@ -1155,7 +1155,20 @@ function dayLog(pid,key){const L=logsFor(pid);if(!L[key])L[key]={foods:[],water:
  const d=L[key];d.foods=d.foods||[];d.habits=d.habits||{};return d;}
 function today(){return dayLog(DB.active,todayKey());}
 
-function bmr(p,wt){const s=p.sex==='male'?5:-161;return 10*wt+6.25*p.height-5*p.age+s;}
+function bmr(p,wt){
+ // Katch-McArdle when body fat is known (more accurate); else Mifflin–St Jeor
+ if(p.bodyFat>0&&p.bodyFat<70){const lbm=wt*(1-p.bodyFat/100);return 370+21.6*lbm;}
+ const s=p.sex==='male'?5:-161;return 10*wt+6.25*p.height-5*p.age+s;}
+/* waist-to-height ratio (both cm) — health signal beyond BMI */
+function whtrCat(r){if(r<0.4)return{t:'Low',c:'info'};if(r<0.5)return{t:'Healthy',c:'good'};if(r<0.6)return{t:'Increased',c:'warn'};return{t:'High',c:'bad'};}
+/* transparent pace note when a target date is set */
+function paceNote(p){
+ if(!p.targetDate||(p.goal!=='lose'&&p.goal!=='gain'))return '';
+ const wt=currentWeight(p.id),days=Math.round((parseKey(p.targetDate)-parseKey(todayKey()))/86400000);
+ if(days<1)return '';
+ const kg=Math.abs((p.goalWeight||wt)-wt),perWk=kg/days*7,td=parseKey(p.targetDate);
+ return `To reach ${p.goalWeight} kg by ${td.getDate()} ${MON[td.getMonth()]} ${td.getFullYear()} (~${days} days) → about ${perWk.toFixed(2)} kg/week.`;
+}
 function currentWeight(pid){const L=logsFor(pid);const keys=Object.keys(L).filter(k=>L[k].weight!=null).sort();
  if(keys.length)return L[keys[keys.length-1]].weight;
  const p=(DB.profiles||[]).find(x=>x.id===pid)||P();return p?p.startWeight:70;}
@@ -1182,6 +1195,12 @@ function computeTargets(p){
  const cond=p.condition||'none';
  if(cond==='pcos'||cond==='diabetes')pf=Math.max(pf,2.0);
  const fatPct=(cond==='pcos'||cond==='diabetes')?0.32:0.27;
+ // pace to a target date if set — hit goal weight by then, within safe limits (7700 kcal ≈ 1 kg)
+ if(p.targetDate&&(p.goal==='lose'||p.goal==='gain')){
+   const days=Math.round((parseKey(p.targetDate)-parseKey(todayKey()))/86400000);
+   const kgDelta=(p.goalWeight||wt)-wt;
+   if(days>=7&&Math.abs(kgDelta)>0.2)cal=tdee+clamp(kgDelta*7700/days,-1000,600);
+ }
  cal=Math.max(1200,Math.round(cal/10)*10);
  const protein=Math.round(wt*pf);
  const fat=Math.round(cal*fatPct/9);
@@ -1948,7 +1967,10 @@ function generateWeek(p){
    const bf=[scaleTo(pk(GEN.breakfast,i),bB*0.6)];
    if(diet!=='veg')bf.push(mkEntry(pk(GEN.bfProtein,i),1));
    bf.push(mkEntry(pk(GEN.bfDairy,i),diet==='veg'?1:0.75));
-   const sn=[mkEntry(pk(fruitPool,i),1),mkEntry(pk(GEN.seeds,i),1.5)];
+   const mealsPerDay=p.mealsPerDay||4;
+   let sn=[mkEntry(pk(fruitPool,i),1),mkEntry(pk(GEN.seeds,i),1.5)];
+   if(mealsPerDay<=3)sn=[];                                   // 3 meals: no snack
+   else if(mealsPerDay>=5)sn.push(mkEntry(pk(fruitPool,i+2),1)); // 5–6: extra snack occasion
    const ln=[scaleTo(pk(breadPool,i),bL*0.42),mkEntry(pk(GEN.dals,i),1),mkEntry(pk(GEN.veg,i),1),mkEntry(pk(GEN.sides,i),1)];
    let dn;
    if(diet==='veg'){dn=[scaleTo(pk(GEN.dinnerVeg,i),bD*0.5),mkEntry(pk(['Paneer','Tofu','Rajma masala','Chana (chickpea) usal'],i),0.75),mkEntry(pk(GEN.veg,i+3),1)];}
@@ -2471,6 +2493,12 @@ function renderProfile(){
      <div class="stat"><div class="k">Maintenance</div><div class="v tnum">${Math.round(bmr(p,wt)*p.activity)}</div></div>
      <div class="stat"><div class="k">Target kcal</div><div class="v tnum">${t.cal}</div></div>
    </div>
+   ${(p.waist||p.bodyFat)?`<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-top:12px">
+     ${p.waist?`<div class="stat"><div class="k">Waist</div><div class="v tnum">${p.waist}<small>cm</small></div></div>
+     <div class="stat"><div class="k">Waist/Height</div><div class="v tnum" style="color:var(--${whtrCat(p.waist/p.height).c})">${(p.waist/p.height).toFixed(2)}<small>${whtrCat(p.waist/p.height).t}</small></div></div>`:''}
+     ${p.bodyFat?`<div class="stat"><div class="k">Body fat</div><div class="v tnum">${p.bodyFat}<small>%</small></div></div>`:''}
+   </div>`:''}
+   ${paceNote(p)?`<div class="faint" style="font-size:12px;margin-top:10px">🎯 ${paceNote(p)}</div>`:''}
    <button class="btn block" style="margin-top:14px" onclick="editProfile('${p.id}')">Edit profile & goals</button>
    </div>`;
 
@@ -2546,7 +2574,7 @@ function renderProfile(){
      <div class="faint" style="font-size:11.5px;margin-top:10px">A local passcode keeps casual eyes off your data on this device. It's a privacy lock — not full account security — and applies only to this browser/device.</div>
    </div>`;
 
- h+=`<div class="disclaimer">Wellora is a personal wellness tracker, not a medical device. Targets use the Mifflin–St&nbsp;Jeor estimate and are starting points — review with a clinician for medical conditions.</div>`;
+ h+=`<div class="disclaimer">Wellora is a personal wellness tracker, not a medical device. Targets use the Mifflin–St&nbsp;Jeor estimate (or Katch–McArdle when you add body fat %) and are starting points — review with a clinician for medical conditions.</div>`;
  if(!inNativeApp()&&/Android/i.test(navigator.userAgent)){
    h+=`<div class="section-title">Android app<span class="line"></span></div><div class="card">
      <a class="btn accent block" href="https://github.com/adesh2151/Wellora/releases/download/latest/Wellora.apk" style="text-decoration:none">📱 Get the Android app</a>
@@ -2582,6 +2610,17 @@ function editProfile(id){
    <label class="check ${p.autoTargets?'on':''}" id="ep-auto" onclick="this.classList.toggle('on')" style="border:none;padding:6px 0">
      <span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
      <span class="ctxt">Auto-calculate my calorie & macro targets</span></label>`;
+ h+=`<div class="section-title" style="margin-top:6px">Fine-tune (optional)<span class="line"></span></div>
+   <div class="row2">
+     <div class="field"><label>Waist (cm)</label><input class="input" id="ep-waist" type="number" step="0.1" value="${p.waist||''}" placeholder="optional"></div>
+     <div class="field"><label>Body fat (%)</label><input class="input" id="ep-bf" type="number" step="0.1" value="${p.bodyFat||''}" placeholder="optional"></div>
+   </div>
+   <div class="row2">
+     <div class="field"><label>Target date</label><input class="input" id="ep-td" type="date" value="${p.targetDate||''}"></div>
+     <div class="field"><label>Meals / day</label><select class="input" id="ep-meals">
+       <option value="" ${!p.mealsPerDay?'selected':''}>Default (4)</option>
+       ${[3,4,5,6].map(n=>`<option value="${n}" ${p.mealsPerDay==n?'selected':''}>${n}</option>`).join('')}</select></div>
+   </div>`;
  if(id&&DB.profiles.length>1)h+=`<button class="btn ghost sm" style="color:var(--bad);margin-top:6px" onclick="deleteProfile('${id}')">Delete this profile</button>`;
  h+=`<button class="btn block" style="margin-top:14px" onclick="saveProfile()">Save profile</button>`;
  openModal(h);
@@ -2594,6 +2633,8 @@ function saveProfile(){
    age:+$('#ep-age').value||30,height:+$('#ep-height').value||170,
    startWeight:+$('#ep-sw').value||70,goalWeight:+$('#ep-gw').value||65,
    activity:+$('#ep-act').value,autoTargets:$('#ep-auto').classList.contains('on')};
+ data.waist=(+$('#ep-waist').value||0)||null; data.bodyFat=(+$('#ep-bf').value||0)||null;
+ data.targetDate=$('#ep-td').value||null; data.mealsPerDay=(+$('#ep-meals').value||0)||null;
  if(editingId){const p=DB.profiles.find(x=>x.id===editingId);Object.assign(p,data);
    if(p.autoTargets)p.targets=computeTargets(p);}
  else{const np=makeProfile(data);np.targets=computeTargets(np);DB.profiles.push(np);DB.active=np.id;logsFor(np.id);}
@@ -2811,6 +2852,19 @@ function showOnboarding(){
          <option value="1.725">Very active — hard training daily, or physical job</option>
          <option value="1.9">Heavy labour — farming / construction / loading</option></select></div>
      </div>
+     <details class="ob-more" style="margin:6px 0 2px">
+       <summary style="cursor:pointer;font-weight:700;color:var(--primary-ink);padding:8px 0;list-style:none">＋ Fine-tune for accuracy (optional)</summary>
+       <div class="row2">
+         <div class="field"><label>Waist (cm)</label><input class="input" id="ob-waist" type="number" inputmode="decimal" placeholder="optional"></div>
+         <div class="field"><label>Body fat (%)</label><input class="input" id="ob-bf" type="number" inputmode="decimal" placeholder="optional"></div>
+       </div>
+       <div class="row2">
+         <div class="field"><label>Target date</label><input class="input" id="ob-td" type="date"></div>
+         <div class="field"><label>Meals / day</label><select class="input" id="ob-meals">
+           <option value="">Default (4)</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+       </div>
+       <div class="faint" style="font-size:11.5px">Body fat sharpens your calorie estimate · a target date paces your plan safely · waist tracks health beyond weight. All optional — skip any.</div>
+     </details>
      <button class="btn block accent" style="margin-top:6px" onclick="finishOnboarding()">Create my profile →</button>
    </div>
    <div class="ob-note">Wellora is a wellness tracker, not medical advice.<br>You can add more profiles or edit details anytime.</div>
@@ -2820,10 +2874,13 @@ function showOnboarding(){
 }
 function finishOnboarding(){
  const name=$('#ob-name').value.trim();if(!name)return toast('Please enter your name');
- const np=makeProfile({name,goal:segVal('ob-goal')||'lose',diet:segVal('ob-diet')||'veg',sex:segVal('ob-sex')||'male',
+ const opt={name,goal:segVal('ob-goal')||'lose',diet:segVal('ob-diet')||'veg',sex:segVal('ob-sex')||'male',
    age:+$('#ob-age').value||30,height:+$('#ob-height').value||170,
    startWeight:+$('#ob-sw').value||70,goalWeight:+$('#ob-gw').value||65,
-   activity:+$('#ob-act').value||1.375,autoTargets:true});
+   activity:+$('#ob-act').value||1.375,autoTargets:true};
+ const owaist=+$('#ob-waist').value||0,obf=+$('#ob-bf').value||0,otd=$('#ob-td').value||'',omeals=+$('#ob-meals').value||0;
+ if(owaist)opt.waist=owaist; if(obf)opt.bodyFat=obf; if(otd)opt.targetDate=otd; if(omeals)opt.mealsPerDay=omeals;
+ const np=makeProfile(opt);
  np.targets=computeTargets(np);
  DB.profiles.push(np);DB.active=np.id;logsFor(np.id);save();
  const o=document.getElementById('onboard');if(o)o.remove();
@@ -2831,8 +2888,9 @@ function finishOnboarding(){
 }
 
 /* ---------- version, what's new, update banner ---------- */
-const APP_VERSION='2.3';
+const APP_VERSION='2.4';
 const WHATSNEW=[
+ {v:'2.4',items:['🎯 Optional details for sharper targets — body fat %, waist, target date, meals/day','A target date paces your plan safely (kg/week shown)','Waist-to-height ratio tracks health beyond the scale']},
  {v:'2.3',items:['🌾 Activity now fits every lifestyle — farming, labour, gym, sports','Clearer daily-activity levels (desk job → heavy labour)','More ways to log real work, not just walking']},
  {v:'2.2',items:['🔁 Repeat yesterday — copy a whole day of meals in one tap','⏱️ Recent foods appear first when you add a meal','☀️ Sunlight tracker adds to your vitamin D · 🔥 daily streak']},
  {v:'2.1',items:['🧮 Nutrient calculator — how much to eat to hit any target','Tap any logged food to see full macros + vitamins it gives','More goals, 40+ exercises, and lots more foods']},
